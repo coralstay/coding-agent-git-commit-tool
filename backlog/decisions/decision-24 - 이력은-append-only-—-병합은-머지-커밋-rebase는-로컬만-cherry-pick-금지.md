@@ -65,6 +65,47 @@ rebase-merge로 병합하는 관행이 있었다.
 **이미 어긋난 과거 커밋은 고치지 않는다.** 그것을 고치는 것 자체가 이력 재작성이고, 그때의
 결정에는 그때의 이유가 있었다.
 
+## 강제 계층 — 로컬과 원격이 맞물리는 지점
+
+**`--no-verify`는 로컬 훅을 건너뛸 수 있다.** 그래서 로컬만으로는 정책이 완결되지 않는다.
+계층을 나눈다.
+
+### 로컬 (git 훅) — 볼 수 있는 모든 재작성 경로를 막는다
+
+| 대상 | 판별 |
+| --- | --- |
+| cherry-pick | `CHERRY_PICK_HEAD` 있고 `rebase-merge/`·`rebase-apply/` 없음 |
+| `--amend` | `source=commit` + `$3`이 `HEAD` + `rebase-merge/` 없음 |
+| squash | `source=squash` 또는 `SQUASH_MSG` |
+| 에디터 경로 | 메시지 파일에 비주석 내용 없음(GF-125) |
+| push된 커밋을 다시 쓰는 rebase | `pre-rebase`에서 재생 대상이 원격 ref에 있는지 |
+
+`--no-verify`로 건너뛸 수 있는 것은 `pre-rebase`와 `pre-push`다. `prepare-commit-msg`는
+건너뛸 수 없으므로 커밋 단계 강제는 그대로 유지된다(doc-15).
+
+### 원격 (GitHub) — 로컬이 닿지 않는 것을 막는다
+
+**github.com에는 `pre-receive` 훅을 설치할 수 없다** — 그건 GitHub Enterprise 전용 기능이다.
+대신 rulesets와 저장소 설정이 그 자리를 대신한다. 2026-09-26 적용 완료:
+
+| 설정 | 값 | 무엇을 막나 |
+| --- | --- | --- |
+| `allow_merge_commit` | `true` | — |
+| `allow_rebase_merge` | **`false`** | rebase-merge가 커밋을 다시 만들어 트레일러를 거짓으로 만드는 것 |
+| `allow_squash_merge` | **`false`** | squash |
+| ruleset `non_fast_forward` | 활성 | **force push** — `--no-verify`로 로컬 훅을 건너뛰어 다시 쓴 이력이 원격에 도달하는 것 |
+| ruleset `deletion` | 활성 | 브랜치 삭제 |
+
+**이게 두 계층이 맞물리는 지점이다.** `--no-verify`로 로컬에서 이력을 다시 쓰는 것 자체는
+막을 수 없다. 그러나 다시 쓴 결과는 **fast-forward가 아니므로 원격이 거부한다.** 즉 로컬
+재작성은 가능하지만 **공개될 수 없다** — 금지선을 "공개된 이력"에 둔 것과 정확히 일치한다.
+
+**켜면 안 되는 규칙**: rulesets의 `required_linear_history`는 이름이 좋아 보이지만
+**merge commit을 금지하는 규칙**이다. append-only와 정반대다.
+
+**켜지 않은 것**: `required_signatures`(서명 강제). 현재 이 저장소의 커밋은 `%G?`가 `N`으로
+나오므로 켜면 자기 push가 막힌다. 서명 설정을 먼저 정리한 뒤 검토할 사항이다.
+
 ## Consequences
 
 - 트레일러가 자기 커밋에 대해 참인 상태가 유지된다. `Signed-off-by`가 실제 커미터와,
