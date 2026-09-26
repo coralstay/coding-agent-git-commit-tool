@@ -4,7 +4,7 @@ title: append-only 이력 정책을 훅으로 강제한다
 status: Draft
 assignee: []
 created_date: '2026-09-26 08:30'
-updated_date: '2026-09-26 12:46'
+updated_date: '2026-09-26 12:55'
 labels:
   - hooks
   - policy
@@ -15,6 +15,7 @@ documentation:
   - backlog/docs/doc-19 - 이력을-바꾸는-git-연산별-훅-판별-방법-실측.md
   - backlog/docs/doc-13 - git-format-재설계-계획-—-커밋-규칙을-prepare-commit-msg로-통합.md
   - backlog/docs/doc-15 - 훅-실행-경로-실측-git-2.54.0.md
+  - backlog/docs/doc-20 - GitHub-원격-강제-설정-관리-—-rulesets와-저장소-설정.md
 priority: high
 type: feature
 ---

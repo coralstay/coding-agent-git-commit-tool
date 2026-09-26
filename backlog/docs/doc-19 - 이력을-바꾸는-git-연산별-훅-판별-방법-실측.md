@@ -3,7 +3,7 @@ id: doc-19
 title: 이력을 바꾸는 git 연산별 훅 판별 방법 (실측)
 type: specification
 created_date: '2026-09-26 08:29'
-updated_date: '2026-09-26 12:46'
+updated_date: '2026-09-26 12:55'
 ---
 # 이력을 바꾸는 git 연산별 훅 판별 방법
 
@@ -194,3 +194,8 @@ amend 거부를 `source=commit`만으로 하면 **`rebase -i`가 깨진다.** `r
 로컬 claude-rails 훅이 `git merge`를 `--ff-only` 없이 거부한다. 이 조사 중 실제로 두 번 막혀
 merge 케이스를 측정조차 할 수 없었다. decision-24의 "병합은 머지 커밋" 정책과 정면 충돌하므로
 그 훅을 먼저 갱신해야 한다(claude-rails 저장소).
+
+## 원격 쪽 강제 설정
+
+이 조사에서 드러난 "로컬 훅이 도달할 수 없는 경로"는 GitHub 설정으로 막았다. 무엇이 왜
+걸려 있고 어떻게 확인·변경하는지는 **doc-20(GitHub 원격 강제 설정 관리)** 에 있다.
