@@ -4,7 +4,7 @@ title: append-only 이력 정책을 훅으로 강제한다
 status: Draft
 assignee: []
 created_date: '2026-09-26 08:30'
-updated_date: '2026-09-26 08:30'
+updated_date: '2026-09-26 12:46'
 labels:
   - hooks
   - policy
@@ -45,6 +45,12 @@ decision-24로 이력 정책을 append-only로 정했다. 커밋이 만들어진
 - [ ] #8 merge 커밋은 통과하고 트레일러가 붙는다
 - [ ] #9 거부 메시지가 왜 막혔는지와 대신 무엇을 쓰라는지 안내한다 (cherry-pick 대신 merge, amend 대신 새 커밋)
 - [ ] #10 README에 append-only 정책과 연산별 허용/거부를 표로 적는다
+- [ ] #11 cherry-pick -n 후 수동 커밋은 상태 파일이 남지 않아 판별 불가 — 알려진 우회 경로로 문서에 적는다(막으려 하지 않는다)
+- [ ] #12 amend 거부는 source=commit이면서 $3이 HEAD일 때만 한다 — commit -C <ref>는 정당한 새 커밋이므로 통과시킨다
+- [ ] #13 amend 거부는 rebase-merge/ 디렉터리가 있으면 면제한다 — rebase -i의 reword가 내부적으로 source=commit을 만들기 때문
+- [ ] #14 GitHub 저장소 설정에서 rebase-merge와 squash-merge를 끄고 merge commit만 남긴다 — 훅으로는 달성 불가
+- [ ] #15 main에 브랜치 보호를 걸어 force push를 막는다
+- [ ] #16 stash/commit-tree/filter-branch/replace 등 훅이 없는 경로를 README의 알려진 한계에 적는다
 <!-- AC:END -->
 
 ## Definition of Done

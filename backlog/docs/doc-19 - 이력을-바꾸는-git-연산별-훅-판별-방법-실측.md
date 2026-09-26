@@ -3,7 +3,7 @@ id: doc-19
 title: 이력을 바꾸는 git 연산별 훅 판별 방법 (실측)
 type: specification
 created_date: '2026-09-26 08:29'
-updated_date: '2026-09-26 08:29'
+updated_date: '2026-09-26 12:46'
 ---
 # 이력을 바꾸는 git 연산별 훅 판별 방법
 
@@ -118,3 +118,79 @@ chmod +x /tmp/hk/prepare-commit-msg
 "이미 적용됨"으로 보고 커밋을 건너뛰어 훅이 안 돈다 — 매번 깨끗한 저장소에서 측정할 것.
 (2) 전역 `commit.template` 유무로 `source` 값이 달라진다 — `GIT_CONFIG_GLOBAL=/dev/null`로
 격리할 것(GF-125에서 CI와 로컬이 갈린 원인이다).
+
+## decision-24의 우회 경로 전수 조사 (실측, 2026-09-26)
+
+이력을 만들거나 바꿀 수 있는 git 명령을 훑어 정책이 닿지 않는 곳을 정리했다.
+
+### A. 훅이 아예 없는 경로
+
+| 명령 | 무엇을 하나 | 훅 |
+| --- | --- | --- |
+| `git stash` | 커밋 객체를 **만든다** | **없음** (실측) |
+| `git commit-tree` | 커밋을 직접 만든다 | **없음** (실측) |
+| `git fast-import`, `hash-object`+`update-ref` | 대량 생성 | 없음 |
+| `git reset --hard`, `git update-ref` | 커밋을 만들지 않고 브랜치를 옮겨 이력을 버린다 | 없음 |
+| `git filter-branch`, `git filter-repo` | 이력 전체를 다시 쓴다 | 없음 |
+| `git replace` | 객체를 바꾸지 않고 **보이는 이력**을 바꾼다 | 없음 |
+| `git reflog expire`, `git gc --prune=now` | 복구 경로를 파괴한다 | 없음 |
+
+이 부류는 git 훅의 공통 한계다. 훅은 보안 경계가 아니다 — 막을 수 없고, 막으려 해서도 안 된다.
+문서에 알려진 한계로 적는다.
+
+### B. 훅이 돌지만 판별이 안 되는 경로
+
+**`git cherry-pick -n` 후 수동 커밋** — 실측 결과 상태 파일이 **하나도 없다**:
+
+```
+cherry-pick -n 후 수동 커밋:  source=[message] files: dirs:
+```
+
+`CHERRY_PICK_HEAD`가 없으므로 **평범한 커밋과 구별할 수 없다.** cherry-pick 차단의 우회
+경로다. `git revert -n`도 같은 부류일 것으로 보이나 미측정.
+
+**`git commit -C <ref>` vs `--amend`** — 둘 다 `source=commit`이다. 구분은 `$3`로 한다:
+
+```
+--amend          : source=[commit] $3=[HEAD]
+commit -C HEAD~1 : source=[commit] $3=[HEAD~1]
+```
+
+`GIT_REFLOG_ACTION`은 설정되지 않았다(확인). 남는 모호성: `git commit -C HEAD`는 `--amend`와
+완전히 같게 보인다. 드문 명령이고 "새 커밋에 HEAD의 메시지를 재사용"이라 어차피 제 메시지를
+쓰게 하는 편이 낫다 — 오탐으로 수용하고 문서에 적는다.
+
+### C. 로컬 훅이 도달할 수 없는 경로 — 가장 큰 구멍
+
+**GitHub 병합 버튼은 로컬 훅을 전혀 거치지 않는다.** 실측으로 이 저장소의 현재 설정:
+
+```
+allow_merge_commit: true
+allow_rebase_merge: true     ← Signed-off-by 불일치를 만든 원인
+allow_squash_merge: true     ← decision-24가 금지한 연산
+브랜치 보호: 없음 (main에 force push 가능)
+```
+
+**decision-24는 훅만으로 달성할 수 없다.** GitHub 저장소 설정에서 rebase-merge와 squash-merge를
+끄고 merge commit만 남겨야 하고, `main`에 브랜치 보호(force push 금지)를 걸어야 한다.
+이건 코드가 아니라 설정이다. 웹 UI의 파일 편집도 같은 부류다.
+
+### D. 우회 의도가 없어도 막히는 오탐
+
+**`rebase -i`의 reword는 rebase 안에서 `source=commit`을 만든다** (실측):
+
+```
+rebase -i reword:
+  [pre-rebase 실행됨]
+  source=[message] files: CHERRY_PICK_HEAD dirs: rebase-merge/   ← 재생
+  source=[commit]  files:                  dirs: rebase-merge/   ← reword(내부 amend)
+```
+
+amend 거부를 `source=commit`만으로 하면 **`rebase -i`가 깨진다.** `rebase-merge/` 디렉터리가
+있으면 면제해야 한다.
+
+### E. 정책 자체의 충돌
+
+로컬 claude-rails 훅이 `git merge`를 `--ff-only` 없이 거부한다. 이 조사 중 실제로 두 번 막혀
+merge 케이스를 측정조차 할 수 없었다. decision-24의 "병합은 머지 커밋" 정책과 정면 충돌하므로
+그 훅을 먼저 갱신해야 한다(claude-rails 저장소).
