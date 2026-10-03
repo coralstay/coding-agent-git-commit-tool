@@ -1,7 +1,7 @@
 ---
-id: DRAFT-21
+id: GF-137
 title: 'append-only 이력 정책 결정과 문서화, 원격 강제 적용'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-09-26 13:24'
 updated_date: '2026-09-26 13:24'
