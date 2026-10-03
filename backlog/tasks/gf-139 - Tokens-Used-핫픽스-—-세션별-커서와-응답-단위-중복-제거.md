@@ -1,14 +1,19 @@
 ---
-id: DRAFT-22
+id: GF-139
 title: Tokens-Used 핫픽스 — 세션별 커서와 응답 단위 중복 제거
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 03:30'
-updated_date: '2026-10-03 03:31'
+updated_date: '2026-10-03 03:35'
 labels:
   - hooks
   - bug
 dependencies: []
+references:
+  - decision-5
+  - decision-19
+documentation:
+  - backlog/docs/doc-16 - 토큰·툴콜-측정-방법과-한계.md
 priority: high
 type: bug
 ---
