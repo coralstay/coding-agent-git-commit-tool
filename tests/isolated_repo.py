@@ -357,6 +357,31 @@ class IsolatedRepoTestCase(unittest.TestCase):
                 handle.write(line + "\n")
         return path
 
+    def write_subagent_transcript(
+        self, home, records, *, agent="agent-1", session_id="fake-session", cwd=None
+    ):
+        """서브에이전트 트랜스크립트(<세션 디렉터리>/<세션 ID>/subagents/<agent>.jsonl).
+
+        Claude Code는 서브에이전트의 대화를 부모 세션 트랜스크립트 옆 이 경로에 같은
+        JSONL 형식으로 남긴다(GF-129). 형식 규칙은 write_transcript와 같다.
+        """
+        repo_path = Path(cwd) if cwd is not None else self.repo
+        directory = (
+            Path(home)
+            / ".claude"
+            / "projects"
+            / transcript_slug(repo_path)
+            / session_id
+            / "subagents"
+        )
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"{agent}.jsonl"
+        lines = [r if isinstance(r, str) else json.dumps(r) for r in records]
+        with path.open("a", encoding="utf-8") as handle:
+            for line in lines:
+                handle.write(line + "\n")
+        return path
+
     def claude_env(self, home, *, session_id="fake-session", version="2-1-0"):
         return {
             "HOME": str(home),
