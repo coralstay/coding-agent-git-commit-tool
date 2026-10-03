@@ -3,7 +3,7 @@ id: doc-1
 title: 설치 가이드
 type: guide
 created_date: '2026-09-19 05:27'
-updated_date: '2026-10-03 03:44'
+updated_date: '2026-10-03 07:30'
 ---
 ## 🚀 설치
 
@@ -45,7 +45,7 @@ cd ~/my-project
 | 파일/디렉터리             | 위치                                     | 언제                                               | 비고                                                                    |
 | ------------------------- | ---------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- |
 | `.gitformat-verified`     | `<대상 저장소>/.git/`                    | `pre-commit` 통과 시 생성, `post-commit`이 곧 삭제 | 커밋 사이에 남지 않는 임시 마커                                         |
-| `.gitformat-token-cursor` | `<대상 저장소>/.git/`                    | Claude Code 실측 성공 시에만 `post-commit`이 갱신(`unavailable`일 때는 갱신 안 함) | `Tokens-Used`/`Tool-Calls` 델타 계산용 커서(`<세션 ID> <줄 수>`, 세션이 바뀌면 0줄부터, GF-139), 커밋 간 유지됨 |
+| `.gitformat-token-attributed` | `<대상 저장소>/.git/`                | Claude Code 실측 성공 시에만 `post-commit`이 갱신(`unavailable`일 때는 갱신 안 함) | `Tokens-Used`/`Tool-Calls` 귀속 기록(첫 줄 세션 ID, 이후 이미 귀속된 응답 키 — 세션이 바뀌면 새로 시작, GF-129), 커밋 간 유지됨. 예전 델타 커서 `.gitformat-token-cursor`는 더 쓰지 않으며 측정 성공 시 지워짐 |
 | `template/hooks/*`        | 이 git-trail 클론 자신의 `template/` 안 | `install.sh --global` 실행 시                      | 클론 위치를 가리키는 심볼릭 링크, 커밋 안 됨(`.gitignore`)              |
 
 **커밋 자체가 바뀌는 경우**: `post-commit`이 조건에 따라 `git commit --amend`로

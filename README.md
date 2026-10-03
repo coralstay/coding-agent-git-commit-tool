@@ -35,7 +35,7 @@ AI-Tool: claude-code
 AI-Tool-Version: 2.1.267
 Co-Authored-By: Claude <noreply@anthropic.com>
 AI-Model: claude-opus-5
-Tokens-Used: 1952818
+Tokens-Used: in=1952818 out=8402
 Tool-Calls: 2
 Hooks-Commit: c828491
 Signed-off-by: cpu-once <231006716+cpu-once@users.noreply.github.com>
@@ -63,8 +63,8 @@ Signed-off-by: cpu-once <231006716+cpu-once@users.noreply.github.com>
 | `Task-Id` | 이 커밋이 어느 작업의 일부인지. 커밋과 태스크를 잇습니다 | `post-commit` · 브랜치명의 `<prefix>-<번호>`(decision-4) | 자동 |
 | `AI-Tool`<br>`AI-Tool-Version` | 어떤 도구가 커밋을 만들었는지 | `post-commit` · `AI_AGENT` 환경변수(Claude Code가 하위 프로세스에 주입) | 강제 — LLM이 스스로 만든 값이 아님 |
 | `AI-Model` | 어떤 모델이 썼는지. 모델별 작업 품질을 나중에 비교할 수 있게 합니다 | `post-commit` · Claude Code는 세션 트랜스크립트의 `message.model`, 그 외는 `gitformat.aiModel` 설정값 | Claude Code는 서버 발급 사실 / 그 외는 자가신고 |
-| `Tokens-Used` | 이 커밋에 든 토큰. 작업 비용을 이력에서 읽게 합니다 | `post-commit` · 직전 커밋 이후 세션 구간의 델타(누적 아님) | 서버 발급 사실(Claude Code 한정), **측정 방법론은 실험 단계** |
-| `Tool-Calls` | 같은 구간의 도구 호출 수 | `post-commit` · `tool_use` 블록 개수 | 위와 동일 |
+| `Tokens-Used` | 이 커밋에 든 토큰(`in=<입력> out=<출력>`). 작업 비용을 이력에서 읽게 합니다 | `post-commit` · 이 커밋이 바꾼 파일을 건드린 응답의 토큰 합(귀속), 델타 아님(decision-27) | 서버 발급 사실(Claude Code 한정), **측정 방법론은 실험 단계** |
+| `Tool-Calls` | 이 커밋의 파일을 건드린 도구 호출 수 | `post-commit` · 귀속된 응답에서 대상 파일을 건드린 `tool_use` 블록 개수 | 위와 동일 |
 | `Co-Authored-By` | 공동저자 귀속 | `post-commit` · `AI-Tool`이 `claude-code`일 때만 | 자동 |
 | `Hooks-Commit` | 이 커밋을 검사한 git-trail 자체의 버전. 훅에 버그가 있었을 때 어느 커밋들이 그 훅을 거쳤는지 역추적합니다 | `post-commit` · 훅 클론의 `rev-parse --short HEAD` | 완전 자동, 모든 커밋 |
 | `Signed-off-by` | 커미터 정보(DCO 관례) | `post-commit` · `git log -1 --format='%cn <%ce>'` | 완전 자동, 모든 커밋 |
@@ -73,7 +73,8 @@ Signed-off-by: cpu-once <231006716+cpu-once@users.noreply.github.com>
 
 `Tokens-Used`/`Tool-Calls`는 측정에 실패하면 사유와 함께 `unavailable (사유)`로 남습니다 —
 `no-session-id`, `transcript-not-found`, `transcript-unreadable`, `transcript-parse-failed`,
-`no-usage-channel`.
+`no-usage-channel`. 이 커밋의 파일을 건드린 응답이 없으면 0과 함께 `(no-attributed-turn)`이
+붙습니다(`Tokens-Used: in=0 out=0 (no-attributed-turn)`).
 
 ## 🪝 커밋 한 번에 훅이 도는 순서
 
