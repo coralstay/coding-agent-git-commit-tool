@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-10-03 08:11'
-updated_date: '2026-10-03 12:11'
+updated_date: '2026-10-03 12:16'
 labels:
   - docs
   - hooks
@@ -42,3 +42,11 @@ documentation:
 - [ ] #4 post-commit detect_verify_bypass() 주석이 마커 작성 주체를 prepare-commit-msg로 적는다
 - [ ] #5 동작 변경 없음 — 기존 테스트 전부 통과
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+AC1~4 주석 정정 완료(da3bae4, 889a100, a89e37e). 매 커밋 전 python3 -m unittest discover -s tests 106건 OK, ruff check 통과.
+
+AC 밖 발견: hooks/post-commit 첫머리(6행) "pre-commit은 시작 시점에 마커를 지우고, 통과하면 끝에 다시 쓴다" — pre-commit은 없고 prepare-commit-msg는 마커를 조건 없이 쓴다. 범위 확장 여부를 유저에게 확인 중.
+<!-- SECTION:NOTES:END -->
