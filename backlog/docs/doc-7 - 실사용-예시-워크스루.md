@@ -3,8 +3,11 @@ id: doc-7
 title: 실사용 예시 워크스루
 type: guide
 created_date: '2026-09-19 05:27'
-updated_date: '2026-09-25 16:46'
+updated_date: '2026-10-03 03:16'
 ---
+> 이 워크스루는 언어 lint 제거(GF-135)와 prepare-commit-msg 도입(GF-125) 이전 구조를
+> 기준으로 쓰였습니다. 재작성은 GF-134에서 합니다.
+
 ## 📌 실제 사용법
 
 설치가 끝나면 평소 하던 `git checkout`/`git add`/`git commit`/`git push`를
@@ -94,6 +97,5 @@ git log -1
     Hooks-Commit: b5bf03a
 ```
 
-git-format은 커밋 단계까지만 다룹니다 — `git push`는 아무 훅도 거치지 않는
-평범한 push입니다(decision-12). push 단계 검증이 필요하면 컨슈머가 직접
-CI나 서버측으로 구성해야 합니다(doc-6 "주의점과 한계" 참고).
+훅은 커밋 단계까지만 돕니다. push된 이력의 보호는 원격 설정이 맡고, 컨슈머는
+doc-20을 참고해 직접 설정합니다(decision-25, doc-6 "주의점과 한계" 참고).

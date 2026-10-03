@@ -4,7 +4,7 @@ title: 트레일러 삽입을 prepare-commit-msg로 이전하고 키 단위 중�
 status: To Do
 assignee: []
 created_date: '2026-09-25 19:33'
-updated_date: '2026-09-25 21:43'
+updated_date: '2026-10-03 03:14'
 labels:
   - hooks
   - trailers
@@ -13,6 +13,7 @@ dependencies:
 references:
   - decision-19
   - decision-18
+  - decision-25
 documentation:
   - backlog/docs/doc-13 - git-format-재설계-계획-—-커밋-규칙을-prepare-commit-msg로-통합.md
   - backlog/docs/doc-14 - 용어-정리-—-턴-트랜스크립트-귀속-마커-구분.md
@@ -43,10 +44,10 @@ type: feature
 - [ ] #4 메시지에 다른 값의 Co-Authored-By가 있으면 훅이 추가하지 않고 원래 값이 보존된다
 - [ ] #5 AI-Tool/AI-Tool-Version/AI-Model을 AI-Agent 한 줄(<도구>/<버전> (<모델>))로 합친다
 - [ ] #6 AI-Agent는 구성요소를 못 구해도 줄을 남긴다 (version-unavailable / model-unavailable)
-- [ ] #7 Signed-off-by와 Verify-Bypassed 트레일러를 더 이상 삽입하지 않는다
-- [ ] #8 재귀 가드가 필요 없어져 제거된다
-- [ ] #9 git rebase로 커밋을 재생해도 트레일러가 추가되지 않고 훅이 실패하지도 않는다
-- [ ] #10 같은 커밋에서 hooks/post-commit을 삭제한다 — 남겨두면 prepare가 넣은 트레일러에 post-commit이 Signed-off-by와 Verify-Bypassed를 또 붙여 이 저장소의 실제 이력에 잘못된 footer가 남는다
+- [ ] #7 재귀 가드가 필요 없어져 제거된다
+- [ ] #8 git rebase로 커밋을 재생해도 트레일러가 추가되지 않고 훅이 실패하지도 않는다
+- [ ] #9 같은 커밋에서 hooks/post-commit을 삭제한다 — 남겨두면 prepare가 넣은 트레일러에 post-commit이 Signed-off-by와 Verify-Bypassed를 또 붙여 이 저장소의 실제 이력에 잘못된 footer가 남는다
+- [ ] #10 Verify-Bypassed 트레일러를 더 이상 삽입하지 않는다. Signed-off-by는 계속 삽입한다(decision-25가 decision-19의 제거 조항을 대체)
 <!-- AC:END -->
 
 ## Definition of Done
@@ -55,3 +56,13 @@ type: feature
 - [ ] #2 ruff check 통과
 - [ ] #3 이 저장소 자신의 커밋이 새 훅으로 정상 생성되는지 확인
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @claude
+created: 2026-10-03 03:14
+---
+2026-10-03: decision-25가 decision-19의 Signed-off-by 제거 조항을 대체했다(더 최근 문서인 decision-24·DRAFT-19가 Signed-off-by를 전제로 한다). 예전 AC#7(Signed-off-by와 Verify-Bypassed 미삽입)을 지우고 Signed-off-by는 유지하는 AC로 다시 적었다. 설명 본문의 'Signed-off-by를 없앤다'는 이 코멘트로 대체된다.
+---
+<!-- COMMENTS:END -->

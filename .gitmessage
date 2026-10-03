@@ -39,4 +39,4 @@
 #
 # ── 이 템플릿 사용법 ──
 #   git config commit.template .gitmessage
-#   (git-format install.sh를 사용하면 자동으로 설정됩니다 — GF-8 참고)
+#   (git-logbook install.sh를 사용하면 자동으로 설정됩니다 — GF-8 참고)
