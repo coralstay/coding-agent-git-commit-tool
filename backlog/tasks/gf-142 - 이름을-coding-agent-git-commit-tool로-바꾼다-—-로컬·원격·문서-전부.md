@@ -1,11 +1,11 @@
 ---
 id: GF-142
 title: 이름을 coding-agent-git-commit-tool로 바꾼다 — 로컬·원격·문서 전부
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-03 13:10'
-updated_date: '2026-10-03 13:11'
+updated_date: '2026-10-03 13:14'
 labels:
   - docs
   - chore
@@ -29,9 +29,31 @@ references:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 decision-29가 이름 변경을 기록하고 decision-26의 이름 조항만 대체한다고 명시한다(범용 유지 판단, 개명 사유 포함)
-- [ ] #2 표시 이름 git-trail이 README·install.sh·훅 주석·.gitmessage·CI·테스트·backlog config·backlog docs에서 새 이름으로 바뀐다(gitformat.* 설정 키·파일명, 지난 decision·task 본문은 제외)
-- [ ] #3 README 첫 설명이 커밋 규칙 검사와 커밋마다 작성자·AI 모델·태스크·토큰 자동 기록을 말한다
-- [ ] #4 전체 테스트와 ruff가 통과한다
-- [ ] #5 GitHub 저장소가 coralstay/coding-agent-git-commit-tool로 rename되고 origin URL·description·topics가 갱신된다
+- [x] #1 decision-29가 이름 변경을 기록하고 decision-26의 이름 조항만 대체한다고 명시한다(범용 유지 판단, 개명 사유 포함)
+- [x] #2 표시 이름 git-trail이 README·install.sh·훅 주석·.gitmessage·CI·테스트·backlog config·backlog docs에서 새 이름으로 바뀐다(gitformat.* 설정 키·파일명, 지난 decision·task 본문은 제외)
+- [x] #3 README 첫 설명이 커밋 규칙 검사와 커밋마다 작성자·AI 모델·태스크·토큰 자동 기록을 말한다
+- [x] #4 전체 테스트와 ruff가 통과한다
+- [x] #5 GitHub 저장소가 coralstay/coding-agent-git-commit-tool로 rename되고 origin URL·description·topics가 갱신된다
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. decision-29 기록
+2. 표시 이름 일괄 치환(문서는 backlog doc update로), README 제목·첫 설명·이름 변천 문장 수정
+3. 테스트·ruff·shellcheck
+4. GitHub rename, origin URL·description·topics 갱신 (push 훅이 Done을 요구하므로 PR 전에)
+5. PR 머지 후 운영 단계: 로컬 폴더 이동, hooksPath 재설치(이 저장소·agent-orchestartor), 메모리 복사
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+검증: unittest 106건 OK, ruff·shellcheck 통과. git-trail 잔존은 README의 이름 변천 문장과 doc-21의 "이전 이름" 서술뿐(의도). GitHub: coralstay/coding-agent-git-commit-tool, 옛 URL 301 리다이렉트 확인, ruleset 23313297 active 유지, origin URL 갱신. 승격 커밋 3393957 제목에서 태스크 번호가 빠졌다(셸이 $id로를 변수명으로 읽음) — amend 금지라 그대로 둔다. backlog 문서는 처음에 파일로 직접 고쳤다가 되돌리고 backlog doc update로 다시 적용했다.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+이름을 git-trail에서 coding-agent-git-commit-tool로 바꿨다(decision-29, decision-26의 이름 조항 대체, 범용 범위 유지). README·install.sh·훅 주석·.gitmessage·CI·테스트·backlog config·doc-1·5·16·20·21의 표시 이름을 바꾸고, README 첫 설명을 하는 일(규칙 검사 + 작성자·모델·태스크·토큰 자동 기록) 중심으로 다시 썼다. GitHub 저장소를 rename하고 origin URL·description·topics를 갱신했다. 검증: 테스트 106건·ruff·shellcheck 통과, 옛 URL 301 리다이렉트와 ruleset 유지 확인. 로컬 폴더 이동과 hooksPath 재설치는 병합 뒤 운영 단계로 한다.
+<!-- SECTION:FINAL_SUMMARY:END -->
