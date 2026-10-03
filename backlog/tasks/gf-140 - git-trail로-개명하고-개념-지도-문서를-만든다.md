@@ -1,14 +1,20 @@
 ---
-id: DRAFT-23
+id: GF-140
 title: git-trail로 개명하고 개념 지도 문서를 만든다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 03:31'
-updated_date: '2026-10-03 03:31'
+updated_date: '2026-10-03 03:35'
 labels:
   - docs
   - naming
 dependencies: []
+references:
+  - decision-25
+  - decision-24
+documentation:
+  - backlog/docs/doc-3 - AI-귀속-트레일러-레퍼런스.md
+  - backlog/docs/doc-20 - GitHub-원격-강제-설정-관리-—-rulesets와-저장소-설정.md
 priority: medium
 type: docs
 ---
