@@ -3,21 +3,19 @@ id: doc-6
 title: 주의점과 한계
 type: guide
 created_date: '2026-09-19 05:27'
-updated_date: '2026-09-25 03:25'
+updated_date: '2026-10-03 03:16'
 ---
 ## ⚠️ 주의점
 
 - **`core.hooksPath`는 로컬 훅을 완전히 대체합니다.** 기존에 `.git/hooks/`에 다른 훅을
   쓰고 있었다면 install.sh 실행 전에 충돌 여부를 확인하세요.
-- **push 단계는 아예 훅하지 않습니다.** git-format은 `commit-msg`/`pre-commit`/
-  `post-commit`(커밋 단계)까지만 다루고, `git push`는 평범한 push입니다(decision-12) —
-  테스트/빌드 실행이나 `--no-verify` 탐지 같은 것도 없습니다. 로컬 훅은 애초에
-  `rm -rf .git/hooks`로도 완전히 우회 가능하므로, git-format의 보장은 "우회
-  불가능"이 아니라 "정상적인 사용에서 흔적을 남긴다"는 것뿐입니다. push 단계까지
-  막는 서버사이드 백스톱(예: CI 필수 status check, 서버 pre-receive 훅)은 이
-  프로젝트 범위 밖입니다 — git-format은 클라이언트측 훅만 제공합니다(decision-11).
-  필요하면 컨슈머가 직접 구성해야 하고, `hooks/commit-msg`/`hooks/pre-commit`을
-  그대로 호출하는 방식으로 재사용할 수 있습니다.
+- **로컬 훅은 우회할 수 있고, push된 이력은 원격 설정이 지킵니다.** 훅은 지금 커밋
+  단계(`prepare-commit-msg`/`commit-msg`/`post-commit`)만 다루고, `--no-verify`나
+  `core.hooksPath` 해제로 건너뛸 수 있습니다. 이력 불변은 원격 강제까지 포함해야 완결되므로
+  범위 안입니다(decision-25가 decision-11·12의 범위 제외 조항을 대체). 지금 원격 강제는
+  이 저장소 main의 force push·삭제 금지와 머지 커밋 전용 병합뿐입니다(doc-20). 컨슈머는
+  doc-20을 참고해 자기 원격을 직접 설정해야 합니다. 웹 UI 커밋과 트레일러 검사는 CI로 할
+  계획입니다(DRAFT-19).
 - **`post-commit`이 커밋 해시를 amend로 바꿀 수 있습니다.** Verify-Bypassed나 AI 귀속
   트레일러가 붙을 때마다 커밋이 한 번 더 amend됩니다 — 커밋 해시를 미리 캐싱하는
   외부 도구가 있다면 이 점을 인지해야 합니다.
@@ -36,12 +34,9 @@ updated_date: '2026-09-25 03:25'
   모든 훅이 stdout/stderr을 UTF-8로 고정하므로 죽지 않습니다(GF-116). 대신 UTF-8을
   못 읽는 터미널에서는 글자가 깨져 보일 수 있습니다 — 커밋을 막는 것보다 낫다고
   판단한 트레이드오프입니다.
-- **지원 언어는 TS/Python/Java/C·C++/SQL 5종으로 고정돼 있습니다.** 확대 계획은
-  없습니다.
-- **push 단계 검증(테스트/빌드 포함)은 의도적으로 이 프로젝트 범위 밖입니다**
-  (decision-11, decision-12). git-format은 커밋 단계(`commit-msg`/`pre-commit`/
-  `post-commit`)까지만 다룹니다 — 필요하면 컨슈머가 자체 CI나 서버 pre-receive
-  훅에서 `hooks/commit-msg`/`hooks/pre-commit`을 직접 호출해 구성해야 합니다.
+- **언어별 lint는 하지 않습니다**(decision-23). 언어 검사가 필요하면 CI에서 돌리세요.
+- **push 단계에서 테스트·빌드는 돌리지 않습니다**(decision-12에서 유지되는 부분). 무거운
+  검사는 컨슈머의 CI 몫입니다.
 - **커밋 이력을 반정형 데이터로 남기는 것까지가 이 프로젝트의 범위입니다.** 그
   데이터를 실제로 파싱하거나 학습용으로 가공하는 도구는 포함돼 있지 않습니다.
 - **`AI-Model`/`Tokens-Used` 측정은 Claude Code의 문서화되지 않은 내부 경로 규칙에

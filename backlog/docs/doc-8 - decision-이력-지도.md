@@ -3,7 +3,7 @@ id: doc-8
 title: decision 이력 지도
 type: guide
 created_date: '2026-09-19 05:31'
-updated_date: '2026-09-25 02:51'
+updated_date: '2026-10-03 03:16'
 ---
 ## backlog/ 디렉토리, 왜 헷갈리는가
 
@@ -56,12 +56,17 @@ Consequences)에만 산문으로 적혀 있다. 17개 decision 중 7개 주제�
 | 주제 | 지금 유효 | 대체된 것 |
 | --- | --- | --- |
 | 커밋 메시지 스타일 | decision-10 | decision-1 |
-| 서버사이드 검증 범위 | decision-11 | decision-3의 5번 항목 |
-| pre-push 존치 | decision-12 | decision-11의 판단 |
+| 서버사이드 검증 범위 | decision-25 | decision-11의 범위 제외(← decision-3의 5번 항목) |
+| pre-push 존치 | decision-12(테스트·빌드 미실행 부분만), decision-25 | decision-11의 판단, decision-12의 push 단계 제외 |
 | 외부 문서 vendoring | decision-9(원안) | decision-13 → decision-14가 되돌림(2단 반전) |
 | 견고성 테스트 전략 | decision-8 | decision-7 |
 | AI 귀속 footer | decision-5 + 본문 내 Amendment(GF-13, GF-97) | decision-15·decision-17은 대체 아니고 보완 |
 | hooks 구현 언어 | decision-16 | decision-9의 POSIX 문법 유지 정책(hooks/* 범위만) |
+| 우회 탐지 | decision-18 | decision-3(검증 마커·Verify-Bypassed) |
+| 테스트 프레임워크 | decision-21 | decision-8의 bats-core 채택 |
+| 트레일러 집합 | decision-19, decision-25(Signed-off-by 유지) | decision-10의 Signed-off-by 조항 → decision-19의 Signed-off-by 제거 조항 |
+| 언어 lint | decision-23 | decision-6 |
+| 프로젝트 목적·이름 | decision-25 | decision-23 제목의 "커밋 형식만" 범위 표현 |
 
 각 행의 근거(해당 decision 파일 본문을 직접 대조):
 
@@ -148,3 +153,13 @@ decision-1(대체됨) · decision-2(standalone) · decision-3(부분 대체됨, 
 (유효) · decision-15(decision-5를 보완, 그 자체로 유효) · decision-16(decision-9를
 hooks/* 범위에서 대체, 유효) · decision-17(decision-5·decision-15를 보완, 그 자체로
 유효) — 17개 모두 위 표 또는 목록 중 하나에 속한다.
+
+### decision-18~25 (2026-09-25 이후)
+
+decision-18(decision-3을 대체, 유효) · decision-19(decision-10의 Signed-off-by 조항을
+대체, 자신의 Signed-off-by 제거 조항은 decision-25가 대체, 나머지 유효) · decision-20
+(standalone) · decision-21(decision-8의 bats 채택을 대체) · decision-22(standalone) ·
+decision-23(decision-6을 대체) · decision-24(standalone) · decision-25(decision-11·12의
+범위 제외 조항과 decision-19의 Signed-off-by 제거 조항을 대체). 위 "17개 decision 전부
+계정"의 decision-11·decision-12 상태는 이 목록이 우선한다. 문서끼리 충돌하면 가장 최근
+문서를 우선한다.
