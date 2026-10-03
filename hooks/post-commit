@@ -459,9 +459,9 @@ def trailer_tokens_used():
         queue_trailer(TRAILER_TOOL_CALLS, calls_value)
 
 
-# Hooks-Commit(decision-5): 이 커밋을 검증한 git-format 훅 코드 자체의 커밋 해시.
+# Hooks-Commit(decision-5): 이 커밋을 검증한 git-logbook 훅 코드 자체의 커밋 해시.
 # 수동 버전 문자열 대신 훅 스크립트가 위치한 저장소의 HEAD를 그대로 읽으므로 항상
-# 정확하다. hooks/가 git-format 클론 안에 있지 않으면(예: 훅만 복사해 배포한 경우)
+# 정확하다. hooks/가 git-logbook 클론 안에 있지 않으면(예: 훅만 복사해 배포한 경우)
 # 조회가 실패하는데, 그때는 커밋을 막지 않고 이 트레일러만 생략하는 게 의도된
 # 동작이다 - 이 함수의 판단이 rev-parse 성공 여부에 달려 있으므로 예외가 아니라
 # 종료 코드로 좁게 확인한다.
