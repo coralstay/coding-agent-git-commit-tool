@@ -4,7 +4,7 @@ title: 트레일러 삽입을 prepare-commit-msg로 이전하고 키 단위 중�
 status: To Do
 assignee: []
 created_date: '2026-09-25 19:33'
-updated_date: '2026-10-03 03:14'
+updated_date: '2026-10-03 12:48'
 labels:
   - hooks
   - trailers
@@ -14,6 +14,7 @@ references:
   - decision-19
   - decision-18
   - decision-25
+  - decision-28
 documentation:
   - backlog/docs/doc-13 - git-format-재설계-계획-—-커밋-규칙을-prepare-commit-msg로-통합.md
   - backlog/docs/doc-14 - 용어-정리-—-턴-트랜스크립트-귀속-마커-구분.md

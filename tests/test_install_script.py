@@ -27,7 +27,7 @@ class InstallScriptTest(IsolatedRepoTestCase):
         self.run_cmd_ok(["git", "init", "-q"], cwd=self.repo)
 
     def fake_root(self):
-        """install.sh와 hooks/만 들어 있는 git-trail 클론 사본.
+        """install.sh와 hooks/만 들어 있는 coding-agent-git-commit-tool 클론 사본.
 
         실제 hooks/ 파일을 지우는 테스트는 이 저장소 자신이 아니라 이 사본에서 한다.
         """

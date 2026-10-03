@@ -3,12 +3,12 @@ id: doc-5
 title: 저장소 구조
 type: guide
 created_date: '2026-09-19 05:27'
-updated_date: '2026-10-03 03:44'
+updated_date: '2026-10-03 13:12'
 ---
 ## 📁 저장소 구조
 
 ```
-git-trail/
+coding-agent-git-commit-tool/
 ├── hooks/                    # core.hooksPath가 가리키는 실제 훅(Python 3, decision-16)
 │   ├── readme.md             # 훅 3개의 역할·생애주기와 python3 실행 요구사항
 │   ├── prepare-commit-msg    # 재생 커밋 면제, 에디터 경로 거부(decision-18)

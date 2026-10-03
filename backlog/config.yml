@@ -1,4 +1,4 @@
-project_name: "git-trail"
+project_name: "coding-agent-git-commit-tool"
 default_status: "To Do"
 statuses: ["To Do", "In Progress", "Done"]
 labels: []

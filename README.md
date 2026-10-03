@@ -1,16 +1,18 @@
 <div align="center">
 
-# 👣 git-trail
+# 🤖 coding-agent-git-commit-tool
 
-**git 이력을 감사 추적(audit trail)으로 만드는 도구 — 커밋 형식 · 출처 기록(provenance) · 이력 불변**
+**코딩 에이전트의 git 커밋을 검사하고, 누가·어떤 모델로·무슨 태스크로·얼마를 들여 만들었는지 커밋에 자동으로 기록하는 git 훅**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Hooks: Python 3](https://img.shields.io/badge/hooks-Python%203-3776ab.svg)](./hooks/)
 [![Installer: POSIX sh](https://img.shields.io/badge/installer-POSIX%20sh-89e051.svg)](./install.sh)
 [![Requires: git + python3](https://img.shields.io/badge/requires-git%20%2B%20python3-brightgreen.svg)](#-필요조건을-말씀드립니다)
 
-에이전트와 사람이 남기는 커밋을 정해진 양식으로 쓰고, 누가·무엇으로·얼마를 들여
-만들었는지 자동으로 기록하고, 한 번 남긴 기록은 다시 쓰지 않게 지키는 도구입니다.
+커밋할 때마다 두 가지를 합니다. 메시지 규칙(제목 형식·길이, 태스크 번호가 든 브랜치)을
+검사해 어기면 커밋을 거부하고, 통과한 커밋 끝에 작성자·AI 도구와 모델·태스크·토큰
+사용량을 트레일러로 자동으로 붙입니다. 한 번 남긴 이력은 다시 쓰지 않는다는 원칙도
+지향하지만, 지금은 GitHub 원격 설정으로만 지키고 있습니다.
 `core.hooksPath` · `git interpret-trailers` 등 **git 자체 기능**으로 동작합니다.
 훅은 Python 3 표준 라이브러리만 쓰므로 설치할 패키지는 없지만, `python3` 자체는
 필요합니다([필요조건](#-필요조건을-말씀드립니다)).
@@ -66,7 +68,7 @@ Signed-off-by: cpu-once <231006716+cpu-once@users.noreply.github.com>
 | `Tokens-Used`                  | 이 커밋에 든 토큰(`in=<입력> out=<출력>`). 작업 비용을 이력에서 읽게 합니다                               | `post-commit` · 이 커밋이 바꾼 파일을 건드린 응답의 토큰 합(귀속), 델타 아님(decision-27)             | 서버 발급 사실(Claude Code 한정), **측정 방법론은 실험 단계** |
 | `Tool-Calls`                   | 이 커밋의 파일을 건드린 도구 호출 수                                                                      | `post-commit` · 귀속된 응답에서 대상 파일을 건드린 `tool_use` 블록 개수                               | 위와 동일                                                     |
 | `Co-Authored-By`               | 공동저자 귀속                                                                                             | `post-commit` · `AI-Tool`이 `claude-code`일 때만                                                      | 자동                                                          |
-| `Hooks-Commit`                 | 이 커밋을 검사한 git-trail 자체의 버전. 훅에 버그가 있었을 때 어느 커밋들이 그 훅을 거쳤는지 역추적합니다 | `post-commit` · 훅 클론의 `rev-parse --short HEAD`                                                    | 완전 자동, 모든 커밋                                          |
+| `Hooks-Commit`                 | 이 커밋을 검사한 coding-agent-git-commit-tool 자체의 버전. 훅에 버그가 있었을 때 어느 커밋들이 그 훅을 거쳤는지 역추적합니다 | `post-commit` · 훅 클론의 `rev-parse --short HEAD`                                                    | 완전 자동, 모든 커밋                                          |
 | `Signed-off-by`                | 커미터 정보(DCO 관례)                                                                                     | `post-commit` · `git log -1 --format='%cn <%ce>'`                                                     | 완전 자동, 모든 커밋                                          |
 | `Verify-Bypassed`              | `--no-verify`로 검사를 건너뛴 사실. 우회를 막지는 못하니 대신 기록합니다(decision-3)                      | `post-commit` · `prepare-commit-msg`가 남긴 검증 마커의 **부재**                                      | 자동                                                          |
 | `Fixes`                        | 이 버그를 만든 커밋                                                                                       | **사람이 씀**(원인 커밋을 아는 경우만) · `commit-msg`가 해시 실재를 검증                              | 검증됨                                                        |
@@ -79,10 +81,10 @@ Signed-off-by: cpu-once <231006716+cpu-once@users.noreply.github.com>
 ## 🪝 커밋 한 번에 훅이 도는 순서
 
 > 공식 문서: [githooks(5)](https://git-scm.com/docs/githooks). git이 제공하는 훅은 28개이고,
-> git-trail의 훅은 지금 커밋 단계만 다룹니다. push된 이력의 보호는 원격 설정이 맡습니다
+> coding-agent-git-commit-tool의 훅은 지금 커밋 단계만 다룹니다. push된 이력의 보호는 원격 설정이 맡습니다
 > ([다루는 범위](#-다루는-범위)).
 
-| 순서 | 훅                                               | 커밋 객체가 있는가 | `--no-verify`로 건너뛰나 | git-trail이 하는 일                                                                  |
+| 순서 | 훅                                               | 커밋 객체가 있는가 | `--no-verify`로 건너뛰나 | coding-agent-git-commit-tool이 하는 일                                                                  |
 | ---- | ------------------------------------------------ | ------------------ | ------------------------ | ------------------------------------------------------------------------------------ |
 | 1    | [`prepare-commit-msg`](hooks/prepare-commit-msg) | 아직 없음          | **건너뛸 수 없음**       | 재생·병합 커밋 면제, 에디터 경로 거부, 검증 마커 기록                                |
 | 2    | (에디터)                                         | 아직 없음          | —                        | 사람이 메시지를 씁니다. 훅보다 **뒤**라서 1번은 최종 메시지를 볼 수 없습니다         |
@@ -116,10 +118,10 @@ attestation(서명된 증명)은 아직 없고, audit(사후 검사)은 커밋 �
 
 **언어별 lint는 다루지 않습니다**(decision-23) — 세 기둥 어디에도 속하지 않고, 컨슈머에게
 npm/ruff/clang-format 같은 도구를 전제하게 만듭니다. 언어 검사가 필요하면 CI에서 돌리시기
-바랍니다. git-trail이 `core.hooksPath`를 점유하므로 그 저장소의 `.git/hooks/*`는
+바랍니다. coding-agent-git-commit-tool이 `core.hooksPath`를 점유하므로 그 저장소의 `.git/hooks/*`는
 무시되고, 자기 훅과 함께 쓰는 방법은 아직 정하지 않았습니다.
 
-> 이름은 git-format → git-logbook → git-trail 순으로 바뀌었습니다(decision-25, decision-26). 설정 키와 파일명
+> 이름은 git-format → git-logbook → git-trail → coding-agent-git-commit-tool 순으로 바뀌었습니다(decision-25, decision-26, decision-29). 설정 키와 파일명
 > (`gitformat.*`, `gitformat.conf`, `.gitformat-*`)은 기존 설치를 깨지 않도록 아직 예전 이름입니다(GF-133).
 
 구성은 Python 훅 + 설정 파일 하나(`hooks/gitformat.conf`) + POSIX sh 설치
@@ -156,17 +158,18 @@ python3는 이런 환경에서 보이지 않을 수 있습니다.
 ### 기존 저장소에 적용하는 방법입니다
 
 ```sh
-git clone https://github.com/coralstay/git-trail.git ~/git-trail   # 원하는 위치에 한 번만 클론
+git clone https://github.com/coralstay/coding-agent-git-commit-tool.git ~/coding-agent-git-commit-tool   # 원하는 위치에 한 번만 클론
 cd ~/my-project
-~/git-trail/install.sh
+~/coding-agent-git-commit-tool/install.sh
 ```
 
-대상 디렉터리를 인자로 주셔도 됩니다: `~/git-trail/install.sh ~/my-project`.
+대상 디렉터리를 인자로 주셔도 됩니다: `~/coding-agent-git-commit-tool/install.sh ~/my-project`.
+클론 위치와 폴더 이름은 자유롭게 정하셔도 됩니다 — `install.sh`는 자기가 놓인 클론의 `hooks/`를 씁니다.
 
 ### 앞으로 만들 모든 새 저장소에 자동 적용하는 방법입니다
 
 ```sh
-~/git-trail/install.sh --global
+~/coding-agent-git-commit-tool/install.sh --global
 ```
 
 `git init`/`git clone`을 실행할 때마다 훅과 커밋 템플릿이 자동으로 심어집니다
