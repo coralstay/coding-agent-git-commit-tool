@@ -4,7 +4,7 @@ title: 트레일러 정합성을 CI에서 검사한다 — required status check
 status: Draft
 assignee: []
 created_date: '2026-09-26 13:22'
-updated_date: '2026-09-26 13:22'
+updated_date: '2026-10-03 03:14'
 labels:
   - ci
   - policy
@@ -55,3 +55,13 @@ decision-24가 마커를 "지워질 훅의 오판을 막으려 살려둔 죽은 
 - [ ] #1 의도적으로 어긋난 트레일러를 가진 커밋으로 실제 PR을 만들어 CI가 막는지 확인
 - [ ] #2 정상 커밋으로 만든 PR은 통과하는지 확인
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @claude
+created: 2026-10-03 03:14
+---
+2026-10-03: decision-19가 Signed-off-by 제거를 정했지만, 이 드래프트(09-26)가 더 최근이라 유저 규칙(최근 문서 우선)에 따라 Signed-off-by는 유지된다 — decision-25에 기록. AC#2(Signed-off-by와 실제 committer 대조)는 유효하다. 컨슈머 배포 여부는 이 드래프트에서 정한다(decision-25 미결 항목).
+---
+<!-- COMMENTS:END -->

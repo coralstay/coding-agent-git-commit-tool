@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-10-03 02:57'
-updated_date: '2026-10-03 02:58'
+updated_date: '2026-10-03 03:13'
 labels:
   - docs
   - naming
@@ -46,6 +46,8 @@ README와 도구 이름은 이 프로젝트를 '커밋 메시지 형식을 정�
 - [ ] #6 backlog/config.yml의 project_name이 git-logbook으로 바뀐다
 - [ ] #7 GF-133에 gitformat.* 설정 키와 마커 파일명을 새 이름으로 옮기는 AC가 추가된다
 - [ ] #8 PR을 머지 커밋으로 병합한 뒤 GitHub 저장소를 coralstay/git-logbook으로 rename하고 로컬 origin URL을 갱신한다
+- [ ] #9 backlog 문서를 decision-25에 맞춘다 — doc-6·doc-7의 'push·서버측 범위 밖' 서술, doc-8 decision 지도(decision-23~25 추가와 decision-11·12·19 상태), doc-1·doc-5·doc-20의 예전 이름·URL
+- [ ] #10 decision-19의 Signed-off-by 제거 조항이 더 최근 문서(decision-24, DRAFT-19)에 의해 대체됐음을 decision-25에 기록하고, 이를 구현할 GF-128의 AC와 README를 맞춘다
 <!-- AC:END -->
 
 ## Definition of Done
