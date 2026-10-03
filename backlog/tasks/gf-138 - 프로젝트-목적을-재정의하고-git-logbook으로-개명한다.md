@@ -1,14 +1,20 @@
 ---
-id: DRAFT-22
+id: GF-138
 title: 프로젝트 목적을 재정의하고 git-logbook으로 개명한다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 02:57'
-updated_date: '2026-10-03 02:57'
+updated_date: '2026-10-03 02:58'
 labels:
   - docs
   - naming
 dependencies: []
+references:
+  - decision-11
+  - decision-12
+  - decision-24
+documentation:
+  - backlog/docs/doc-20 - GitHub-원격-강제-설정-관리-—-rulesets와-저장소-설정.md
 priority: high
 type: docs
 ---
