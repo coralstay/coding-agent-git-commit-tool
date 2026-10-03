@@ -1,8 +1,9 @@
 ---
 id: GF-142
 title: 이름을 coding-agent-git-commit-tool로 바꾼다 — 로컬·원격·문서 전부
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-03 13:10'
 updated_date: '2026-10-03 13:11'
 labels:
