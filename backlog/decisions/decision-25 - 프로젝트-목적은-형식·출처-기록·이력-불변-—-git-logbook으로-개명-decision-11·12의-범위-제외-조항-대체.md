@@ -39,10 +39,13 @@ decision-24와 DRAFT-19는 decision-11(서버측·CI 검증은 범위 밖), deci
 - decision-11의 "서버측/CI 기반 검증은 이 프로젝트 범위 밖": 대체한다. 원격 강제는 이력
   불변 기둥의 일부다 — 로컬 훅은 `--no-verify`와 웹 UI 커밋을 막지 못하므로 원격 없이는
   기둥이 완결되지 않는다(decision-24 "강제 계층").
-- decision-12의 "push 단계는 훅하지 않는다": 대체한다. push된 이력을 다시 쓰는 rebase를
-  막는 `pre-rebase`(DRAFT-18)가 들어온다.
-- 두 decision의 나머지 판단은 유지한다. pre-push에서 테스트·빌드를 돌리지 않는다는 것,
-  컨슈머용 재사용 워크플로를 배포하지 않았던 당시 판단은 그대로다.
+- decision-12의 "push 단계는 다루지 않는다": 대체한다. push된 이력의 보호가 범위에
+  들어온다 — 원격 rulesets가 non-fast-forward push를 거부하고(decision-24), 로컬에서는
+  `pre-rebase`가 push 여부를 보고 재작성을 막는다(DRAFT-18). 새 push 단계 훅(pre-push)을
+  두는 것은 아니다.
+- 두 decision의 나머지 판단은 유지한다. pre-push에서 테스트·빌드를 돌리지 않는다.
+- **미결**: CI 트레일러 검사(DRAFT-19)를 이 저장소 전용으로 둘지, 컨슈머에게 배포할지는
+  정하지 않았다. DRAFT-19에서 정한다.
 
 decision-23의 언어별 lint 제거는 유지한다. 언어 lint는 세 기둥 어디에도 속하지 않는다.
 대체되는 것은 그 제목의 "커밋 형식만"이라는 범위 표현뿐이다.
@@ -56,7 +59,7 @@ GitHub 저장소는 새로 만들지 않고 rename한다(이력·PR·rulesets �
 - README의 소개와 "다루는 범위"를 세 기둥으로 다시 쓴다.
 - 이번에 바꾸지 않는 이름이 있다.
   - 설정 키·파일명(`gitformat.*`, `gitformat.conf`, `.gitformat-verified`,
-    `_GITFORMAT_AMEND_GUARD`): 컨슈머의 git config를 깨는 호환성 변경이라 GF-133에서 다룬다.
+    `.gitformat-token-cursor`, `_GITFORMAT_AMEND_GUARD`): 컨슈머의 git config를 깨는 호환성 변경이라 GF-133에서 다룬다.
   - 태스크 접두어 `GF`: 바꾸면 기존 커밋의 `Task-Id`와 어긋난다. 지난 기록을 고치는 것은
     이력 불변과 반대다.
   - 지난 decision·doc·task 본문의 "git-format": 당시의 기록이라 그대로 둔다.

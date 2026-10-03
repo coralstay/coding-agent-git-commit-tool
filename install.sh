@@ -115,5 +115,5 @@ case "$GLOBAL_MODE" in
 esac
 
 echo "git-logbook: 참고 - git push --no-verify는 로컬 훅으로 탐지할 수 없습니다."
-echo "  push된 이력은 원격 저장소 설정이 지킵니다 - 이 저장소에 맞게 직접 구성하세요"
-echo "  (README의 '다루는 범위' 참고)."
+echo "  push된 이력은 원격 설정이 지킵니다 - 대상 저장소의 원격(GitHub rulesets·병합 방식)을"
+echo "  직접 구성하세요 (예시: git-logbook 저장소의 backlog doc-20)."

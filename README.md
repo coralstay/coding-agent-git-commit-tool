@@ -78,7 +78,7 @@ Signed-off-by: cpu-once <231006716+cpu-once@users.noreply.github.com>
 ## 🪝 커밋 한 번에 훅이 도는 순서
 
 > 공식 문서: [githooks(5)](https://git-scm.com/docs/githooks). git이 제공하는 훅은 28개이고,
-> git-logbook의 훅은 지금 커밋 단계만 다룹니다. push된 이력은 원격 쪽 설정이 지킵니다
+> git-logbook의 훅은 지금 커밋 단계만 다룹니다. push된 이력의 보호는 원격 설정이 맡습니다
 > ([다루는 범위](#-다루는-범위)).
 
 | 순서 | 훅 | 커밋 객체가 있는가 | `--no-verify`로 건너뛰나 | git-logbook이 하는 일 |
@@ -100,13 +100,14 @@ git 이력을 작업 로그로 만드는 데 필요한 세 가지입니다(decis
 
 | 기둥 | 하는 일 | 지금 있는 것 | 계획 |
 | --- | --- | --- | --- |
-| **형식** | 사람이 쓰는 제목·본문을 정해진 양식으로 | 제목·본문 검증, 에디터 경로 거부 | 검증을 `prepare-commit-msg`로 통합(GF-127) |
+| **형식** | 사람이 쓰는 제목·본문을 정해진 양식으로 | 제목·본문 검증, 에디터 경로 거부, 커밋 단위 규칙(decision-22, 강제 없음) | 검증을 `prepare-commit-msg`로 통합(GF-127) |
 | **출처 기록** | 누가·어떤 도구와 모델로·얼마를 들여 만들었는지 자동으로 남김 | 위 트레일러 전체, `Task-Id` 브랜치 강제, `AI-Model` 게이트 | 측정 재작성(GF-129), 트레일러 집합 재정의(decision-19) |
-| **이력 불변** | 한 번 남긴 기록은 다시 쓰지 않음(append-only, decision-24) | GitHub 원격 설정: 머지 커밋만 허용, force push·브랜치 삭제 금지(doc-20) | 로컬 훅 강제(DRAFT-18), CI 트레일러 검사(DRAFT-19) |
+| **이력 불변** | 한 번 남긴 기록은 다시 쓰지 않음(append-only, decision-24) | 이 저장소의 GitHub 설정: 머지 커밋만 허용, main의 force push·삭제 금지(doc-20). 컨슈머는 doc-20을 참고해 직접 설정 | 로컬 훅 강제(DRAFT-18 append-only 훅 강제), CI 트레일러 검사(DRAFT-19) |
 
 세 기둥은 서로를 필요로 합니다. 이력이 다시 쓰이면 트레일러가 자기 커밋에 대해 거짓이
 되고, 기록할 내용이 정형화돼 있지 않으면 지킬 가치가 줄어듭니다. 로컬 훅은
-`--no-verify`나 웹 UI 커밋을 막지 못하므로, 그 부분은 원격 설정이 맡습니다.
+`--no-verify`를 막지 못합니다. 그렇게 다시 쓴 이력이 main에 force push되는 것은 원격
+설정이 거부합니다. 웹 UI 커밋과 트레일러 검사는 CI로 할 계획입니다(DRAFT-19).
 
 **언어별 lint는 다루지 않습니다**(decision-23) — 세 기둥 어디에도 속하지 않고, 컨슈머에게
 npm/ruff/clang-format 같은 도구를 전제하게 만듭니다. 언어 검사가 필요하면 CI에서 돌리시기
@@ -114,7 +115,7 @@ npm/ruff/clang-format 같은 도구를 전제하게 만듭니다. 언어 검사�
 무시되고, 자기 훅과 함께 쓰는 방법은 아직 정하지 않았습니다.
 
 > 이름을 git-format에서 git-logbook으로 바꿨습니다(decision-25). 설정 키와 파일명
-> (`gitformat.*`, `gitformat.conf`)은 기존 설치를 깨지 않도록 아직 예전 이름입니다(GF-133).
+> (`gitformat.*`, `gitformat.conf`, `.gitformat-*`)은 기존 설치를 깨지 않도록 아직 예전 이름입니다(GF-133).
 
 구성은 Python 훅 + 설정 파일 하나(`hooks/gitformat.conf`) + POSIX sh 설치
 스크립트(`install.sh`)입니다. `core.hooksPath` · `init.templateDir` ·
