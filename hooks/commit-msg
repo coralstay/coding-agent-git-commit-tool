@@ -120,7 +120,7 @@ def message_lines():
 def validate_format(content):
     # 커밋 타입 목록은 gitformat.conf(다중값 gitformat.type)에서 읽는다 -
     # .gitmessage에 적힌 사람이 읽는 목록과 일치하는지는
-    # tests/robustness-commit-msg.bats가 검증한다(런타임 결합 없이 테스트로만 보장).
+    # tests/test_config_keys_match_hooks.py가 검증한다(런타임 결합 없이 테스트로만 보장).
     types = conf_get_all("gitformat.type")
     # 목록이 비면 정규식이 ^()...가 돼 모든 커밋이 알 수 없는 이유로 거부된다
     # (GF-76). 조용히 진행하지 않고 원인을 밝히며 멈춘다.
@@ -317,7 +317,7 @@ STATUS = 1
 try:
     STATUS = run()
 finally:
-    # pre-commit이 통과해 검증마커를 남긴 뒤 commit-msg가 거부하면 커밋 자체가 안
+    # prepare-commit-msg가 검증마커를 남긴 뒤 commit-msg가 거부하면 커밋 자체가 안
     # 생성돼 post-commit이 안 돌고 마커가 안 지워진다. 이후 무관한 --no-verify
     # 커밋이 그 스테일 마커를 "검증됨"으로 잘못 소비할 수 있다(GF-31). 0이 아닌
     # 상태로 끝나면(거부든 예기치 못한 예외든) 항상 마커를 지운다 — 정상 통과
