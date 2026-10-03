@@ -198,8 +198,9 @@ def claude_transcript_path():
     return os.path.join(home, ".claude", "projects", slug, f"{session_id}.jsonl")
 
 
-# --no-verify 우회 탐지(decision-3): pre-commit이 마커를 남기지 못했다는 건
-# commit-msg/pre-commit이 스킵됐다는 뜻이다.
+# --no-verify 우회 탐지(decision-3): 마커가 없다는 건 prepare-commit-msg가 마커를
+# 남기지 못했다는 뜻이다. prepare-commit-msg는 --no-verify로 건너뛸 수 없으므로
+# 지금은 재생 커밋(그 훅이 면제로 먼저 빠져나간 경우)에서만 마커가 없다.
 def detect_verify_bypass():
     if not VERIFIED and not trailer_exists(TRAILER_VERIFY_BYPASSED, "true"):
         queue_trailer(TRAILER_VERIFY_BYPASSED, "true")
