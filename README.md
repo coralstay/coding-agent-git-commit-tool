@@ -104,6 +104,10 @@ git 이력을 작업 로그로 만드는 데 필요한 세 가지입니다(decis
 | **출처 기록** | 누가·어떤 도구와 모델로·얼마를 들여 만들었는지 자동으로 남김 | 위 트레일러 전체, `Task-Id` 브랜치 강제, `AI-Model` 게이트 | 측정 재작성(GF-129), 트레일러 집합 재정의(decision-19, `Signed-off-by`는 유지 — decision-25) |
 | **이력 불변** | 한 번 남긴 기록은 다시 쓰지 않음(append-only, decision-24) | 이 저장소의 GitHub 설정: 머지 커밋만 허용, main의 force push·삭제 금지(doc-20). 컨슈머는 doc-20을 참고해 직접 설정 | 로컬 훅 강제(DRAFT-18 append-only 훅 강제), CI 트레일러 검사(DRAFT-19) |
 
+용어로 말하면 trail(감사 추적)이 세 기둥 전체이고, provenance(출처 기록)가 두 번째 기둥입니다.
+attestation(서명된 증명)은 아직 없고, audit(사후 검사)은 커밋 시점 검사까지만 있습니다 —
+자세한 구현 위치는 [개념 지도(doc-21)](<backlog/docs/doc-21 - 개념-지도-—-trail·provenance·attestation·audit이-어디에-구현돼-있나.md>)를 보세요.
+
 세 기둥은 서로를 필요로 합니다. 이력이 다시 쓰이면 트레일러가 자기 커밋에 대해 거짓이
 되고, 기록할 내용이 정형화돼 있지 않으면 지킬 가치가 줄어듭니다. 로컬 훅은
 `--no-verify`를 막지 못합니다. 그렇게 다시 쓴 이력이 main에 force push되는 것은 원격
@@ -170,6 +174,9 @@ cd ~/my-project
 
 ## 📚 더 자세한 내용이 궁금하시다면
 
+- **trail·provenance·attestation·audit이 각각 어느 훅·함수·설정에 구현돼 있고 어디가
+  비어 있는지**는 [개념 지도(doc-21)](<backlog/docs/doc-21 - 개념-지도-—-trail·provenance·attestation·audit이-어디에-구현돼-있나.md>)에
+  정리했습니다.
 - **설치 상세, 커밋 메시지 규칙 전문, AI 귀속 트레일러 표, 커스터마이즈, 저장소 구조,
   주의점·한계**는 `backlog doc list`에서 확인하실 수 있습니다.
 - **설계 배경과 각 결정 이유**는 `backlog decision list`에서
