@@ -5,7 +5,7 @@
 # 옮겨온다. 그때까지 commit-msg/post-commit이 그대로 자기 일을 계속한다.
 #
 # GF-126에서 언어별 lint를 pre-commit에서 이 파일로 옮겼다가 GF-135에서 그 lint를
-# 통째로 지웠다 — 언어 lint는 git-logbook의 범위(형식·출처 기록·이력 불변, decision-25)
+# 통째로 지웠다 — 언어 lint는 git-trail의 범위(형식·출처 기록·이력 불변, decision-25)
 # 어디에도 속하지 않는 기능이었다(decision-23). 남은 것은 검증마커 기록뿐이고 그 이유는
 # write_verified_marker()의 주석에 있다.
 #
@@ -18,7 +18,7 @@
 # 에디터 경로 판정에 $1의 내용을 쓴다 — $2로 에디터를 판정할 수 없는 이유는 아래
 # has_author_message()의 주석에 적었다.
 #
-# template/(GF-9)로 설치된 저장소는 .git/hooks/prepare-commit-msg 자체가 git-logbook
+# template/(GF-9)로 설치된 저장소는 .git/hooks/prepare-commit-msg 자체가 git-trail
 # 클론을 가리키는 심볼릭 링크다. 링크가 놓인 .git/hooks/가 아니라 링크가 가리키는
 # 실제 위치를 기준으로 gitformat.conf를 찾아야 한다(GF-16) — realpath가 링크 체인을
 # 따라간다.

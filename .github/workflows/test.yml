@@ -1,6 +1,6 @@
 name: test
 
-# git-logbook 자체의 개발용 CI(GF-21, decision-8). 컨슈머에 배포하는 verify.yml과
+# git-trail 자체의 개발용 CI(GF-21, decision-8). 컨슈머에 배포하는 verify.yml과
 # 달리 이건 이 저장소 자신의 훅 코드 품질만 검사한다 — 훅도 테스트도 Python 표준
 # 라이브러리만 쓰므로(decision-16, decision-21) 테스트 프레임워크를 따로 설치하는
 # 스텝이 없다. 아래 ruff 설치는 이 저장소 자신의 Python 코드를 검사하는 개발 도구다 —
