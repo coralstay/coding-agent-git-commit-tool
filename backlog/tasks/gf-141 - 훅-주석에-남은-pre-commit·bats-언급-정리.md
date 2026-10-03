@@ -1,8 +1,9 @@
 ---
 id: GF-141
 title: 훅 주석에 남은 pre-commit·bats 언급 정리
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-03 08:11'
 updated_date: '2026-10-03 12:11'
 labels:
