@@ -3,7 +3,7 @@ id: doc-21
 title: 개념 지도 — trail·provenance·attestation·audit이 어디에 구현돼 있나
 type: specification
 created_date: '2026-10-03 03:46'
-updated_date: '2026-10-03 07:14'
+updated_date: '2026-10-03 07:30'
 ---
 git-trail이라는 이름(decision-26)과 설명에 쓰는 네 용어가 이 저장소에서 실제로 무엇을 가리키는지
 정리한다. 용어마다 **뜻 → 구현 위치 → 빈 곳** 순서다. 구현 위치는 함수 이름과 파일 경로로 적는다
@@ -52,7 +52,7 @@ git-trail에서는 커밋마다 붙는 출처 트레일러가 provenance다.
 | `Task-Id` | `trailer_task_id()` | 브랜치명의 `<prefix>-<번호>` | `hooks/commit-msg`의 `enforce_task_id_branch()` — 패턴이 없으면 거부. 예외 브랜치(main/master/develop/release/*)·detached HEAD·병합 중은 면제(decision-4) |
 | `AI-Tool`, `AI-Tool-Version`, `Co-Authored-By` | `trailer_ai_tool()` | `AI_AGENT` 환경변수(Claude Code가 주입) | — |
 | `AI-Model` | `trailer_ai_model()` → `read_transcript_model()`, `claude_transcript_path()` | Claude Code: 세션 트랜스크립트의 `message.model` / 그 외: `gitformat.aiModel` 설정 | `hooks/commit-msg`의 `enforce_ai_model_gate()` — Claude Code 외 도구는 `gitformat.knownModel` 목록에 있어야 함 |
-| `Tokens-Used`, `Tool-Calls` | `trailer_tokens_used()` → `measure_claude_code_token_usage()`, `aggregate_usage()` | 트랜스크립트 `message.usage`를 응답 단위로 합산, 커서 `<git-dir>/.gitformat-token-cursor`(GF-139) | — |
+| `Tokens-Used`, `Tool-Calls` | `trailer_tokens_used()` → `measure_claude_code_token_usage()` → `read_transcript_entries()`, `group_responses()`, `commit_target_paths()`, `AttributionMatcher`, `attributed_record_load()`/`attributed_record_save()` | 세션·서브에이전트 트랜스크립트에서 이 커밋이 바꾼 파일을 건드린 응답의 `message.usage`를 응답 단위로 합산(커밋당 귀속, decision-27). 귀속 기록 `<git-dir>/.gitformat-token-attributed`(GF-129) | — |
 | `Hooks-Commit` | `trailer_hooks_commit()` | 훅이 들어 있는 git-trail 클론의 `rev-parse --short HEAD` | — |
 | `Signed-off-by` | `trailer_signed_off_by()` | 커밋 시점의 커미터(`%cn <%ce>`) | — (decision-25로 유지) |
 
@@ -61,8 +61,8 @@ git-trail에서는 커밋마다 붙는 출처 트레일러가 provenance다.
 **빈 곳**
 - Claude Code 외 도구의 `AI-Model`은 자가신고다(decision-15). 사용량 채널이 없어 `Tokens-Used`는 `unavailable (no-usage-channel)`.
 - 트랜스크립트 경로는 Claude Code의 문서화되지 않은 규칙에 기댄다(`claude_transcript_path()` 주석).
-- 서브에이전트의 토큰은 부모 트랜스크립트에 없어 집계되지 않는다.
-- **설계 의도는 커밋당 토큰량**(이 커밋에 스테이징된 파일을 실제로 건드린 응답의 토큰)이다. 지금 구현은 직전 커밋 이후 구간 전체(델타)를 세고 있어 의도와 다르다. GF-129에서 귀속 방식으로 바꾸고, 델타는 기록하지 않는다.
+- `Tokens-Used`의 귀속 판정은 경로 문자열 대조다. 경로를 쓰지 않고 파일을 바꾸는 명령(글롭, 변수, `cd` 후 파일명만)은 놓치고, 경로를 담기만 한 명령(`git add`)은 귀속한다. 어느 커밋 파일도 건드리지 않은 탐색·대화 비용은 기록되지 않는다(decision-27, doc-16 "한계").
+- 서브에이전트 트랜스크립트 레이아웃(`<세션 ID>/subagents/*.jsonl`)도 문서화되지 않은 내부 구현이라, 바뀌면 서브에이전트 몫이 조용히 빠진다.
 - commit-msg의 게이트와 검사(`enforce_task_id_branch()`, `enforce_ai_model_gate()`, `validate_*`)는 `--no-verify`로 건너뛸 수 있고, 지금은 그 흔적도 남지 않는다(`Verify-Bypassed`가 사실상 도달 불가). 검증을 prepare-commit-msg로 옮기는 GF-127에서 닫힌다.
 
 ## attestation — 증명
