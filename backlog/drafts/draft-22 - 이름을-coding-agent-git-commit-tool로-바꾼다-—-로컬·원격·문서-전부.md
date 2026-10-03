@@ -1,0 +1,30 @@
+---
+id: DRAFT-22
+title: 이름을 coding-agent-git-commit-tool로 바꾼다 — 로컬·원격·문서 전부
+status: Draft
+assignee: []
+created_date: '2026-10-03 13:10'
+labels:
+  - docs
+  - chore
+dependencies: []
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+"git-trail"은 이 도구가 하는 일을 말해주지 못했다. 유저가 2026-10-03 "와닿지 않는다"며 프로젝트가 무엇을 하는지부터 다시 정리했고, 오해의 여지가 없도록 하는 일을 그대로 적은 이름으로 정했다: coding-agent-git-commit-tool. 지원 범위는 Claude 전용으로 좁히지 않는다(유저 판단 — git-claude 대신 범용 이름).
+
+유저 지시: 로컬·원격·문서 모두 바꾼다.
+
+AC 후보:
+1. decision-29가 이름 변경을 기록하고 decision-26의 이름 조항만 대체한다고 명시한다(범용 유지 판단, 개명 사유 포함)
+2. 표시 이름 git-trail이 README·install.sh·훅 주석·.gitmessage·CI·테스트·backlog config·doc-1·5·16·20·21에서 새 이름으로 바뀐다(gitformat.* 설정 키·파일명은 제외)
+3. README 첫 설명이 "커밋 규칙을 검사하고 커밋마다 작성자·AI 모델·태스크·토큰을 자동으로 기록하는 git 훅"을 말한다
+4. 전체 테스트·ruff 통과
+5. GitHub 저장소가 coralstay/coding-agent-git-commit-tool로 rename되고 origin URL·description·topics가 갱신된다
+6. (병합 후 운영 단계) 로컬 폴더를 ~/githubs/coding-agent-git-commit-tool로 옮기고, 이 저장소와 agent-orchestartor의 core.hooksPath를 새 경로로 다시 설치하며, Claude 메모리를 새 프로젝트 경로로 복사한다
+
+바꾸지 않는 것: gitformat.* 설정 키(GF-133), 태스크 접두어 GF, 지난 기록 본문.
+로컬 폴더 이동을 마지막에 두는 이유: 세션 도중 옮기면 트랜스크립트 경로가 어긋나 남은 커밋의 Tokens-Used/AI-Model 측정이 끊긴다.
+<!-- SECTION:DESCRIPTION:END -->
