@@ -84,15 +84,19 @@ def local_get(key):
 # Task-Id 접두어 기본값, AI 도구 식별자, Co-Authored-By 값)이 모여 있다. 값만
 # 여기서 읽고, 이 값들을 쓰는 로직은 이 파일 안에서만 독립적으로 유지한다.
 MARKER = os.path.join(GIT_DIR, conf_get("gitformat.markerFile"))
-# Tokens-Used/Tool-Calls 델타 커서(decision-5 확장). .gitformat-verified와 같은
-# "커밋 간 git-미추적 상태 파일" 관례를 따르되, 이 파일은 삭제되지 않고
-# measure_claude_code_token_usage()가 매번 "<세션 ID> <최신 트랜스크립트 줄 수>"
-# 한 줄로 덮어쓴다. 트랜스크립트는 세션마다 새 파일이라 줄 수만 저장하면 새 세션의
-# 짧은 파일을 이전 세션의 줄 수로 읽어 첫 커밋이 0이 된다 - 그래서 세션 ID를 같이
-# 저장하고, 다르면 0줄부터 다시 센다(GF-139).
+# Tokens-Used/Tool-Calls 귀속 기록(decision-27, GF-129). .gitformat-verified와 같은
+# "커밋 간 git-미추적 상태 파일" 관례를 따르되, 이 파일은 삭제되지 않고 세션 동안
+# 계속 자란다. 첫 줄은 세션 ID, 그다음 줄부터는 이미 어느 커밋에 귀속된 응답의 키다
+# (attributed_record_load()/attributed_record_save()). 응답 하나가 두 커밋에 들어가지
+# 않게 하려는 것이라, 세션 ID가 다르면(응답 키는 세션 사이에 유일하다는 보장이 없다)
+# 기록을 버리고 새로 시작한다.
 # 파일명은 gitformat.conf로 빼지 않는다 - 컨슈머가 오버라이드할 이유가 없는 순수
 # 내부 구현 세부사항이라 다른 trailer 키 이름들과 성격이 다르다.
-CURSOR = os.path.join(GIT_DIR, ".gitformat-token-cursor")
+ATTRIBUTED_RECORD = os.path.join(GIT_DIR, ".gitformat-token-attributed")
+# GF-139까지 쓰던 델타 커서("<세션 ID> <줄 수>"). 의미가 델타에서 커밋당 귀속으로
+# 바뀌어(decision-27) 더는 읽지 않는다. 남겨 두면 "아직 쓰이는 상태 파일"로 오해받으니
+# 측정에 성공할 때 지운다 - 읽지 않으므로 지우는 시점은 값에 영향이 없다.
+LEGACY_CURSOR = os.path.join(GIT_DIR, ".gitformat-token-cursor")
 
 TRAILER_VERIFY_BYPASSED = conf_get("gitformat.trailer.verifyBypassed")
 TRAILER_TASK_ID = conf_get("gitformat.trailer.taskId")
@@ -318,33 +322,57 @@ def trailer_ai_model():
         queue_trailer(TRAILER_AI_MODEL, ai_model)
 
 
-USAGE_FIELDS = (
+# in에 합치는 입력측 usage 필드. 캐시 토큰도 모델이 실제로 읽어 들인 입력이라 빼면
+# 값이 무의미해진다(doc-16 실측: 입력측이 전체의 거의 전부다). out은 output_tokens
+# 하나다(decision-27, GF-129).
+INPUT_USAGE_FIELDS = (
     "input_tokens",
-    "output_tokens",
     "cache_creation_input_tokens",
     "cache_read_input_tokens",
 )
+OUTPUT_USAGE_FIELD = "output_tokens"
 
 
-# assistant 턴의 message.usage를 합산하고 tool_use 콘텐츠 블록을 센다. 줄 하나라도
-# JSON 파싱에 실패하면 ValueError를 그대로 올려 배치 전체를 실패시킨다 — 불량 줄만
-# 건너뛰면 "일부만 집계된 값"이 정상값인 척 기록되므로 동작 변경이다.
+# JSONL 트랜스크립트 하나를 읽어 (줄 키, 파싱된 줄) 목록으로 돌려준다. 줄 키는
+# "<트랜스크립트 디렉터리 기준 파일 경로>:<1부터 센 줄 번호>"로, requestId/message.id가
+# 없는 줄을 응답으로 삼을 때 쓴다(group_responses()). 트랜스크립트는 뒤에 덧붙기만
+# 하므로 같은 줄은 다음 커밋에서도 같은 키를 얻는다.
 #
-# 트랜스크립트는 API 응답 하나를 content 블록마다 한 줄씩 기록하고, 각 줄이 같은
-# message.usage를 반복해서 들고 있다 - 줄마다 더하면 2~3배 부풀려진다(GF-139 실측:
-# assistant 215줄이 응답 109개). 같은 응답의 줄은 최상위 requestId와 message.id를
-# 공유하므로 이 쌍을 응답 키로 삼아 usage는 키당 한 번만 더한다. seen_keys는 호출자가
-# 넘기는 집합으로, 여기서 본 키를 채워 넣는다 - 커서 앞 구간의 키를 미리 채워 넘기면
-# 커밋 경계를 걸친 응답이 뒤 커밋에서 다시 더해지지 않는다. 둘 중 하나라도 없는 줄은
-# 같은 응답인지 판단할 근거가 없으므로 예전처럼 줄 단위로 더한다. tool_use는 블록이
-# 줄마다 다르므로 키와 무관하게 모든 줄에서 센다.
-def aggregate_usage(lines, seen_keys):
-    tokens = 0
-    calls = 0
-    for line in lines:
+# 줄 하나라도 JSON 파싱에 실패하면 ValueError를 그대로 올려 배치 전체를 실패시킨다 —
+# 불량 줄만 건너뛰면 "일부만 집계된 값"이 정상값인 척 기록되므로(GF-111/GF-112).
+# 파일을 못 읽으면 OSError가 올라간다. 둘 다 호출자가 사유 슬러그로 바꾼다.
+def read_transcript_entries(path, key_prefix):
+    with open(path, "rb") as f:
+        data = f.read().decode("utf-8", errors="replace")
+    lines = data.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    entries = []
+    for number, line in enumerate(lines, start=1):
         if not line.strip():
             continue
-        entry = json.loads(line)
+        entries.append((f"{key_prefix}:{number}", json.loads(line)))
+    return entries
+
+
+# assistant 줄을 응답 단위로 묶는다. 트랜스크립트는 API 응답 하나를 content 블록마다
+# 한 줄씩 기록하고 각 줄이 같은 message.usage를 반복해서 들고 있다 - 줄마다 더하면
+# 2~3배 부풀려진다(GF-139 실측: assistant 215줄이 응답 109개). 같은 응답의 줄은
+# 최상위 requestId와 message.id를 공유하므로 "<requestId> <message.id>"를 응답 키로
+# 삼는다. 이 키는 그대로 귀속 기록 파일의 한 줄이 되므로, 공백·개행이 든 id는(실제로는
+# 본 적 없다) 기록을 깨뜨리지 않도록 id가 없는 것과 같이 취급한다.
+#
+# - usage는 응답의 첫 줄 값만 쓴다 - 나머지 줄은 같은 값의 반복이다.
+# - tool_use 블록은 모든 줄에서 모은다 - 한 응답의 도구 호출이 여러 줄에 흩어져 있어
+#   첫 줄만 보면 귀속 근거를 놓친다(AC#2).
+# - id가 하나라도 없는 줄은 같은 응답인지 판단할 근거가 없으므로 줄 키로 각자 하나의
+#   응답이 된다(GF-139 규칙 유지).
+#
+# 키가 같으면 파일이 달라도(본 트랜스크립트와 서브에이전트 트랜스크립트) 같은 응답으로
+# 본다 - 같은 API 응답을 두 번 더하지 않는다는 원칙이 파일 경계보다 우선이다.
+def group_responses(entries):
+    responses = {}
+    for line_key, entry in entries:
         if not isinstance(entry, dict) or entry.get("type") != "assistant":
             continue
         message = entry.get("message")
@@ -352,55 +380,204 @@ def aggregate_usage(lines, seen_keys):
             continue
         request_id = entry.get("requestId")
         message_id = message.get("id")
-        response_key = None
-        if isinstance(request_id, str) and request_id and isinstance(message_id, str) and message_id:
-            response_key = (request_id, message_id)
-        usage = message.get("usage")
-        if response_key is not None and response_key in seen_keys:
-            usage = None
-        elif response_key is not None:
-            seen_keys.add(response_key)
-        if isinstance(usage, dict):
-            for field in USAGE_FIELDS:
-                value = usage.get(field)
-                tokens += value if isinstance(value, int) else 0
+        if (
+            isinstance(request_id, str)
+            and re.fullmatch(r"\S+", request_id)
+            and isinstance(message_id, str)
+            and re.fullmatch(r"\S+", message_id)
+        ):
+            response_key = f"{request_id} {message_id}"
+        else:
+            response_key = line_key
+        response = responses.get(response_key)
+        if response is None:
+            response = {"usage": message.get("usage"), "tool_uses": []}
+            responses[response_key] = response
         content = message.get("content")
         if isinstance(content, list):
-            calls += sum(
-                1
+            response["tool_uses"].extend(
+                block
                 for block in content
                 if isinstance(block, dict) and block.get("type") == "tool_use"
             )
-    return tokens, calls
+    return responses
 
 
-# Tokens-Used/Tool-Calls(decision-5 확장, GF-97 amendment): trailer_ai_model()과
-# 같은 트랜스크립트를 message.usage(Anthropic API 응답을 그대로 기록한 값이라
-# 자가신고가 아님) 합산과 tool_use 개수 집계에 쓴다. 한 세션에서 커밋이 여러 번
-# 나오므로 세션 누적치를 매번 반복하면 의미가 없어, CURSOR 파일에 "세션 ID와 그
-# 세션 트랜스크립트에서 이미 처리한 줄 수"를 저장해두고 그 이후 구간만 델타로
-# 집계한다. usage는 줄이 아니라 응답 단위로 한 번씩 더한다(GF-139, aggregate_usage()).
+# 귀속 대상 경로 = 방금 만든 커밋이 바꾼 파일 목록(저장소 상대경로). post-commit은
+# 커밋이 이미 만들어진 뒤에 돌기 때문에 git diff --cached는 비어 있다 - 그래서 HEAD
+# 커밋 자체의 파일 목록을 읽는다(AC#8). --root는 첫 커밋(부모 없음)에서도 목록을
+# 내게 하고, -z는 core.quotePath가 비ASCII 경로를 따옴표·이스케이프로 감싸는 것을
+# 막아 원래 경로 그대로 받게 한다. 이름 바꾸기는 -M을 주지 않으므로 옛 이름과 새
+# 이름이 둘 다 나온다 - 어느 쪽을 건드린 응답이든 이 커밋의 작업이다.
+def commit_target_paths():
+    output = subprocess.run(
+        [
+            "git",
+            "diff-tree",
+            "--root",
+            "--no-commit-id",
+            "--name-only",
+            "-r",
+            "-z",
+            "HEAD",
+        ],
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+        errors="surrogateescape",
+        check=True,
+    ).stdout
+    return {path for path in output.split("\0") if path}
+
+
+# Bash 명령 판정에서 대상 경로 바로 앞에 와도 되는 글자: 공백, 따옴표, 백틱, 셸
+# 구두점(= ( < > | ; & , :). 경로 바로 뒤에는 경로를 이어 쓰는 글자(영숫자 _ . - /)가
+# 오면 안 된다 - hooks/post-commit-old나 a.txt.bak은 다른 파일이다.
+BASH_PATH_LEFT_BOUNDARY = "\\s'\"`=(<>|;&,:"
+BASH_PATH_RIGHT_FORBIDDEN = "A-Za-z0-9_.\\-/"
+
+
+# 귀속 판정기. 대상 경로와 저장소 최상위 경로를 한 번만 계산해 두고, tool_use 블록
+# 하나가 대상 경로를 실제로 건드렸는지 판정한다(decision-27, GF-129). 판정은 경로
+# 문자열 대조뿐이라 완벽하지 않다 - 경로를 쓰지 않고 파일을 바꾸는 명령(글롭, 변수,
+# cd 후 파일명만 쓰기)은 놓치고, 경로를 문자열로 담기만 한 명령(git add, 커밋
+# 메시지에 경로 언급)은 귀속한다. 놓치는 쪽을 택한 것은 오귀속보다 과소 보고가
+# 낫다는 판단이다(doc-16 "판정 규칙").
+class AttributionMatcher:
+    def __init__(self, targets):
+        self.targets = targets
+        self.top = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+            errors="surrogateescape",
+            check=True,
+        ).stdout.rstrip("\n")
+        # macOS의 /tmp → /private/tmp처럼 같은 디렉터리가 두 이름을 가지면, 도구가
+        # 기록한 절대경로와 git이 알려준 최상위 경로가 서로 다른 이름을 쓸 수 있다.
+        # 비교는 양쪽 모두 심볼릭 링크를 푼 물리 경로로 한다.
+        self.real_top = os.path.realpath(self.top)
+        self.bash_patterns = [self._bash_pattern(target) for target in sorted(targets)]
+
+    # Bash 명령 문자열에서 대상 경로 하나를 찾는 정규식(AC#4).
+    #
+    # - 하위 디렉터리 안의 대상(hooks/post-commit): 저장소 상대경로가 경계로 구분돼
+    #   들어 있으면 귀속한다. 왼쪽 경계에 '/'도 허용한다 - 그래야 절대경로
+    #   (/…/git-format/hooks/post-commit)나 ../git-format/hooks/post-commit처럼
+    #   상대경로를 꼬리로 품은 표기도 잡힌다. myhooks/post-commit은 왼쪽이 영문자라
+    #   걸리지 않는다. 파일명(post-commit)만 든 명령은 상대경로가 없으니 귀속하지
+    #   않는다 - README.md 같은 흔한 이름이 무관한 응답을 끌어오는 것을 막는다.
+    # - 저장소 최상위의 대상(a.txt): 상대경로가 곧 파일명이다. 그래서 왼쪽 경계에
+    #   '/'를 허용하지 않는다 - 허용하면 sub/a.txt 같은 다른 파일의 파일명 매칭이
+    #   된다. 대신 ./a.txt와 저장소 최상위 절대경로(논리·물리 둘 다)를 붙인 표기는
+    #   명시적으로 받는다.
+    def _bash_pattern(self, target):
+        right = rf"(?![{BASH_PATH_RIGHT_FORBIDDEN}])"
+        if "/" in target:
+            left = rf"(?<![^{BASH_PATH_LEFT_BOUNDARY}/])"
+            return re.compile(left + re.escape(target) + right)
+        left = rf"(?<![^{BASH_PATH_LEFT_BOUNDARY}])"
+        needles = [target, f"./{target}"]
+        needles += [os.path.join(top, target) for top in {self.top, self.real_top}]
+        alternatives = "|".join(re.escape(needle) for needle in needles)
+        return re.compile(f"{left}(?:{alternatives}){right}")
+
+    # file_path/notebook_path 값을 저장소 상대경로로 정규화한다(AC#3). 상대경로는
+    # 저장소 최상위 기준으로 본다(훅도 Claude Code도 최상위에서 돈다). 디렉터리 부분만
+    # 심볼릭 링크를 풀고 파일명은 그대로 둔다 - 파일 자체가 심볼릭 링크면 커밋에는
+    # 링크 이름으로 들어가므로, 끝까지 풀면 링크 대상 이름으로 바뀌어 어긋난다. 저장소
+    # 밖이면 None.
+    def repo_relative(self, path):
+        if not os.path.isabs(path):
+            path = os.path.join(self.top, path)
+        path = os.path.normpath(path)
+        physical = os.path.join(
+            os.path.realpath(os.path.dirname(path)), os.path.basename(path)
+        )
+        relative = os.path.relpath(physical, self.real_top)
+        if (
+            relative == os.curdir
+            or relative == os.pardir
+            or relative.startswith(os.pardir + os.sep)
+        ):
+            return None
+        return relative.replace(os.sep, "/")
+
+    # tool_use 블록 하나가 대상 경로를 건드렸는가. file_path/notebook_path를 가진
+    # 도구(Read/Edit/Write/NotebookEdit 등)는 완전 일치, Bash는 명령 문자열 대조,
+    # 그 밖의 도구(Grep/Glob 등)는 귀속하지 않는다 - 경로 인자가 있어도 "건드림"이
+    # 아니라 검색 범위라서다.
+    def touches(self, block):
+        tool_input = block.get("input")
+        if not isinstance(tool_input, dict):
+            return False
+        for field in ("file_path", "notebook_path"):
+            value = tool_input.get(field)
+            if isinstance(value, str) and value:
+                return self.repo_relative(value) in self.targets
+        if block.get("name") == "Bash":
+            command = tool_input.get("command")
+            if isinstance(command, str):
+                return any(pattern.search(command) for pattern in self.bash_patterns)
+        return False
+
+
+# 귀속 기록 파일(ATTRIBUTED_RECORD)을 읽어 이미 귀속된 응답 키 목록을 돌려준다. 첫
+# 줄이 지금 세션 ID와 다르거나, 파일이 없거나(최초 실행), 손상돼 첫 줄을 알아볼 수
+# 없으면 빈 목록이다 - 이건 조회 실패가 아니라 "이 세션에서 아직 아무 응답도 귀속한
+# 적 없음"과 동치이므로 측정을 실패로 만들지 않는다. 순서를 지키려고 목록으로 돌려준다
+# (다시 쓸 때 기존 키 뒤에 새 키를 덧붙인다).
+def attributed_record_load(session_id):
+    try:
+        with open(ATTRIBUTED_RECORD, "rb") as f:
+            raw = f.read().decode("utf-8", errors="replace")
+    except OSError:
+        return []
+    lines = raw.split("\n")
+    if lines[0] != session_id:
+        return []
+    return [line for line in lines[1:] if line]
+
+
+def attributed_record_save(session_id, keys):
+    with open(ATTRIBUTED_RECORD, "w", encoding="utf-8") as f:
+        f.write("".join(f"{line}\n" for line in [session_id, *keys]))
+
+
+# Tokens-Used/Tool-Calls(decision-5 확장, GF-97 amendment, decision-27):
+# trailer_ai_model()과 같은 트랜스크립트를 읽어, 이 커밋에 귀속된 응답의 usage만
+# 더한다. message.usage는 Anthropic API 응답을 그대로 기록한 값이라 자가신고가 아니다.
 #
-# 성공하면 MEASUREMENT_STATUS=ok와 TOKENS_SUM/TOOL_CALL_COUNT를 채운다. 실패하면
-# MEASUREMENT_STATUS=unavailable + MEASUREMENT_REASON(실패 지점을 가리키는 짧은
-# 슬러그)만 남기고 CURSOR도 갱신하지 않는다 - 다음 커밋이 같은 지점부터 재시도한다.
-# 실패 여부/사유는 예외가 아니라 이 상태 변수 두 개로만 전달한다.
+# 값은 "이 커밋에 든 토큰"이다 - 직전 커밋 이후 구간 전체(델타)는 어디에도 세지
+# 않는다(decision-27이 decision-19의 delta 조항을 대체). 그래서 구간이 아니라 세션
+# 전체(본 트랜스크립트 + <세션>/subagents/*.jsonl)를 훑어 아직 귀속되지 않은 응답 중
+# 이 커밋이 바꾼 파일을 건드린 것을 고른다 - "a 수정 → b 먼저 커밋 → a 커밋" 순서에서도
+# a를 고친 응답이 뒤 커밋에 들어간다. 응답 하나는 한 커밋에만 귀속되도록, 귀속한 응답
+# 키를 ATTRIBUTED_RECORD에 남긴다. 이 커밋의 파일을 건드리지 않은 응답(무관한 파일
+# 탐색, 도구 호출 없는 대화)은 어느 커밋에도 들어가지 않는다 - 커밋당 토큰량이라는
+# 정의에서 의도된 결과다. Read도 file_path를 가지므로 커밋한 파일을 읽은 응답은
+# 귀속된다.
 #
-# 주의(README/decision-5 참고): 이 함수가 계산하는 값은 "이 커밋을 만드는 데
-# 정확히 필요했던 토큰"이 아니라 "직전 커밋 이후 이 세션에서 소비된 토큰"의
-# 근사치다 - 그 구간에 이 커밋과 무관한 대화/탐색이 섞이면 과대평가될 수 있다.
+# 성공하면 MEASUREMENT_STATUS=ok와 INPUT_TOKENS_SUM/OUTPUT_TOKENS_SUM/TOOL_CALL_COUNT/
+# ATTRIBUTED_RESPONSE_COUNT를 채운다. 실패하면 MEASUREMENT_STATUS=unavailable +
+# MEASUREMENT_REASON(실패 지점을 가리키는 짧은 슬러그)만 남기고 기록 파일도 갱신하지
+# 않는다 - 다음 커밋이 같은 응답들을 다시 판정할 수 있어야 한다. 실패 여부/사유는
+# 예외가 아니라 이 상태 변수들로만 전달한다.
 MEASUREMENT_STATUS = "unavailable"
 MEASUREMENT_REASON = ""
-TOKENS_SUM = 0
+INPUT_TOKENS_SUM = 0
+OUTPUT_TOKENS_SUM = 0
 TOOL_CALL_COUNT = 0
+ATTRIBUTED_RESPONSE_COUNT = 0
 
 
 def measure_claude_code_token_usage():
-    global MEASUREMENT_STATUS, MEASUREMENT_REASON, TOKENS_SUM, TOOL_CALL_COUNT
+    global MEASUREMENT_STATUS, MEASUREMENT_REASON, INPUT_TOKENS_SUM, OUTPUT_TOKENS_SUM
+    global TOOL_CALL_COUNT, ATTRIBUTED_RESPONSE_COUNT
     MEASUREMENT_STATUS = "unavailable"
     MEASUREMENT_REASON = ""
 
-    if not os.environ.get("CLAUDE_CODE_SESSION_ID"):
+    session_id = os.environ.get("CLAUDE_CODE_SESSION_ID", "")
+    if not session_id:
         MEASUREMENT_REASON = "no-session-id"
         return
 
@@ -409,62 +586,77 @@ def measure_claude_code_token_usage():
         MEASUREMENT_REASON = "transcript-not-found"
         return
 
+    # 서브에이전트 트랜스크립트는 Claude Code가 본 트랜스크립트 옆
+    # <세션 ID>/subagents/에 같은 JSONL 형식으로 남긴다(AC#11). 서브에이전트를 쓰지
+    # 않은 세션에는 이 디렉터리가 없으므로 없는 건 정상이다. 정렬은 줄 키와 응답 순서를
+    # 실행마다 같게 하려는 것이다. 줄 키의 파일 부분은 트랜스크립트 디렉터리 기준 경로라
+    # 본 트랜스크립트와 서브에이전트 파일이 서로 겹치지 않는다.
+    sources = [(transcript, os.path.basename(transcript))]
+    subagent_dir = os.path.join(os.path.dirname(transcript), session_id, "subagents")
+    if os.path.isdir(subagent_dir):
+        try:
+            names = sorted(os.listdir(subagent_dir))
+        except OSError:
+            MEASUREMENT_REASON = "transcript-unreadable"
+            return
+        for name in names:
+            path = os.path.join(subagent_dir, name)
+            if name.endswith(".jsonl") and os.path.isfile(path):
+                sources.append((path, f"{session_id}/subagents/{name}"))
+
+    # 한 파일, 한 줄이라도 깨지면 배치 전체가 실패한다 - 일부만 집계한 값을 정상값처럼
+    # 남기지 않는다(GF-112). 이제는 구간이 아니라 세션 전체를 매번 읽으므로, 한 번
+    # 깨진 줄이 생기면 그 세션의 이후 커밋은 계속 transcript-parse-failed가 된다 -
+    # 조용히 틀린 값을 남기는 것보다 사유가 계속 보이는 쪽을 택했다.
+    entries = []
+    for path, key_prefix in sources:
+        try:
+            entries += read_transcript_entries(path, key_prefix)
+        except OSError:
+            MEASUREMENT_REASON = "transcript-unreadable"
+            return
+        except (ValueError, TypeError):
+            MEASUREMENT_REASON = "transcript-parse-failed"
+            return
+
+    responses = group_responses(entries)
+    matcher = AttributionMatcher(commit_target_paths())
+    recorded = attributed_record_load(session_id)
+    already_attributed = set(recorded)
+
+    input_sum = 0
+    output_sum = 0
+    calls = 0
+    new_keys = []
+    for response_key, response in responses.items():
+        if response_key in already_attributed:
+            continue
+        # Tool-Calls는 귀속된 응답의 tool_use 전부가 아니라 대상 경로를 실제로 건드린
+        # 블록만 센다(AC#6) - 같은 응답 안의 ls·grep 같은 호출은 이 커밋의 작업이 아니다.
+        touching = sum(1 for block in response["tool_uses"] if matcher.touches(block))
+        if not touching:
+            continue
+        new_keys.append(response_key)
+        calls += touching
+        usage = response["usage"]
+        if isinstance(usage, dict):
+            for field in INPUT_USAGE_FIELDS:
+                value = usage.get(field)
+                input_sum += value if isinstance(value, int) else 0
+            value = usage.get(OUTPUT_USAGE_FIELD)
+            output_sum += value if isinstance(value, int) else 0
+
+    # 여기까지 왔으면 트랜스크립트를 실제로 읽어 판정했으므로, 귀속된 응답이 없어도
+    # 기록을 쓴다 - 세션이 바뀐 직후라면 첫 줄(세션 ID)을 새 세션으로 맞춰 둔다.
+    attributed_record_save(session_id, recorded + new_keys)
     try:
-        with open(transcript, "rb") as f:
-            data = f.read().decode("utf-8", errors="replace")
+        os.remove(LEGACY_CURSOR)
     except OSError:
-        MEASUREMENT_REASON = "transcript-unreadable"
-        return
-
-    # 커서 값은 `wc -l`과 동일하게 개행 문자 개수로 센다 - 마지막 줄에 개행이 없는
-    # 파일을 하나 적게 세는 것까지 같아야 이전 커밋이 남긴 커서와 어긋나지 않는다.
-    total_lines = data.count("\n")
-
-    lines = data.split("\n")
-    if lines and lines[-1] == "":
-        lines.pop()
-
-    # 커서는 "<세션 ID> <줄 수>" 한 줄이다(GF-139). 파일이 없거나(최초 실행)
-    # 손상됐거나, 숫자만 든 예전 형식이거나, 세션 ID가 지금 세션과 다르면 0으로
-    # 취급한다 - 이건 조회 자체의 실패가 아니라 "이 세션의 트랜스크립트는 아직 아무
-    # 줄도 처리한 적 없음"과 동치이므로 실패로 취급하지 않는다. 세션 ID는 마지막
-    # 공백 기준으로 잘라 비교한다(줄 수 쪽엔 공백이 없다).
-    session_id = os.environ["CLAUDE_CODE_SESSION_ID"]
-    cursor_count = 0
-    try:
-        with open(CURSOR, "rb") as f:
-            raw_cursor = f.read().decode("utf-8", errors="replace").rstrip("\n")
-    except OSError:
-        raw_cursor = ""
-    cursor_parts = raw_cursor.rsplit(" ", 1)
-    if (
-        len(cursor_parts) == 2
-        and cursor_parts[0] == session_id
-        and re.fullmatch(r"[0-9]+", cursor_parts[1])
-    ):
-        cursor_count = int(cursor_parts[1])
-
-    new_entries = lines[cursor_count:] if total_lines > cursor_count else []
-
-    # 입력 전체를 한 번에 슬러프해 처리하던 동작과 같은 실패 단위를 유지한다 - 한
-    # 줄이라도 깨지면 배치 전체가 실패해 사유 슬러그만 남고 커서는 갱신되지 않는다.
-    # 커서 앞 구간(같은 세션에서 이미 집계한 줄)은 합산하지 않고 응답 키만 모은다 -
-    # 응답 하나의 줄이 커밋 경계 앞뒤로 나뉘면 앞 커밋이 이미 그 usage를 더했다.
-    # 이 구간은 앞 커밋이 이미 파싱에 성공한 줄이므로 여기서 깨지면 트랜스크립트가
-    # 바뀐 것이고, 새 구간과 똑같이 배치 실패로 다룬다.
-    seen_keys = set()
-    try:
-        aggregate_usage(lines[:cursor_count], seen_keys)
-        TOKENS_SUM, TOOL_CALL_COUNT = aggregate_usage(new_entries, seen_keys)
-    except (ValueError, TypeError):
-        MEASUREMENT_REASON = "transcript-parse-failed"
-        return
-
-    # 여기까지 왔으면 트랜스크립트를 실제로 읽어 처리했으므로, 합산값이 0이어도
-    # 커서는 항상 갱신한다 - 그래야 다음 커밋이 같은 구간을 중복 집계하지 않는다.
-    # 개행 없이 "<세션 ID> <줄 수>"만 쓴다(읽는 쪽과 포맷을 맞춘다).
-    with open(CURSOR, "w", encoding="utf-8") as f:
-        f.write(f"{session_id} {total_lines}")
+        pass
+    INPUT_TOKENS_SUM = input_sum
+    OUTPUT_TOKENS_SUM = output_sum
+    TOOL_CALL_COUNT = calls
+    ATTRIBUTED_RESPONSE_COUNT = len(new_keys)
     MEASUREMENT_STATUS = "ok"
 
 
@@ -472,17 +664,25 @@ def measure_claude_code_token_usage():
 # (AI_TOOL_ID가 빈 값)은 트레일러를 전혀 붙이지 않는다. claude-code는
 # measure_claude_code_token_usage()의 실측 결과를 쓴다. 그 외 감지된 AI 도구는
 # 아직 서버발급 usage를 읽을 로컬 채널이 없으므로(decision-15) 항상
-# "unavailable (no-usage-channel)"을 남긴다. 측정해서 나온 0은 "unavailable"과
-# 구분되는 정당한 값이므로 0 초과 가드 없이 그대로 기록한다.
+# "unavailable (no-usage-channel)"을 남긴다.
+#
+# 측정에 성공한 값은 두 가지로 나뉜다(decision-27). 귀속된 응답이 있으면
+# "in=<입력> out=<출력>"이고, 그 usage가 정말 0이어도 사유 없이 그대로 남긴다 -
+# 측정해서 나온 0은 "unavailable"과 구분되는 정당한 값이다. 귀속된 응답이 하나도
+# 없으면 같은 0이라도 "이 커밋 파일을 건드린 응답을 못 찾았다"는 뜻이므로
+# (no-attributed-turn)을 붙여 진짜 측정값 0과 footer만 보고 구별되게 한다(AC#12).
 def trailer_tokens_used():
     if not AI_TOOL_ID:
         return
 
     if AI_TOOL_ID == AI_TOOL_CLAUDE_CODE:
         measure_claude_code_token_usage()
-        if MEASUREMENT_STATUS == "ok":
-            tokens_value = str(TOKENS_SUM)
+        if MEASUREMENT_STATUS == "ok" and ATTRIBUTED_RESPONSE_COUNT:
+            tokens_value = f"in={INPUT_TOKENS_SUM} out={OUTPUT_TOKENS_SUM}"
             calls_value = str(TOOL_CALL_COUNT)
+        elif MEASUREMENT_STATUS == "ok":
+            tokens_value = "in=0 out=0 (no-attributed-turn)"
+            calls_value = "0 (no-attributed-turn)"
         else:
             tokens_value = f"unavailable ({MEASUREMENT_REASON})"
             calls_value = f"unavailable ({MEASUREMENT_REASON})"
