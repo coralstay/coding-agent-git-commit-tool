@@ -1,10 +1,11 @@
 ---
 id: GF-140
 title: git-trail로 개명하고 개념 지도 문서를 만든다
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-03 03:31'
-updated_date: '2026-10-03 03:35'
+updated_date: '2026-10-03 03:43'
 labels:
   - docs
   - naming
@@ -49,3 +50,13 @@ GF-138과 같은 원칙으로 설정 키 gitformat.*(GF-133), 태스크 접두�
 - [ ] #3 git grep -i git-logbook -- ':!backlog' 결과에 의도한 예외만 남는다
 - [ ] #4 rename 뒤 예전 URL 두 개(git-format, git-logbook)가 새 저장소로 리다이렉트되고 ruleset이 유지된다
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. decision-26 기록 → 커밋
+2. 표시 이름 git-logbook → git-trail 치환(README·install.sh·훅·테스트·CI·.gitmessage·config·doc-1/5/6/20) → 테스트 → 커밋
+3. 개념 지도 doc 신규(trail·provenance·attestation·audit, 실제 함수·파일 기준) + README 링크 → 커밋
+4. 서브에이전트 독립 검토(함수명·경로 대조)
+5. PR → 머지 커밋 → gh repo rename git-trail → origin 갱신 → description/topics → 리다이렉트 확인
+<!-- SECTION:PLAN:END -->
