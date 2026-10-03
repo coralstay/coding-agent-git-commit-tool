@@ -68,7 +68,14 @@ class TrailerAiAttributionTest(IsolatedRepoTestCase):
                     "message": {
                         "model": "claude-slug-fix-test",
                         "usage": {"input_tokens": 10, "output_tokens": 5},
-                        "content": [{"type": "tool_use", "name": "bash"}],
+                        # 커밋할 a.txt를 건드린 응답이라야 Tokens-Used에 귀속된다(GF-129).
+                        "content": [
+                            {
+                                "type": "tool_use",
+                                "name": "Edit",
+                                "input": {"file_path": "a.txt"},
+                            }
+                        ],
                     },
                 }
             ],
@@ -86,7 +93,7 @@ class TrailerAiAttributionTest(IsolatedRepoTestCase):
         )
         message = self.head_message(cwd=nested)
         self.assertTrailerCount(message, "AI-Model: claude-slug-fix-test", 1)
-        self.assertTrailerCount(message, "Tokens-Used: 15", 1)
+        self.assertTrailerCount(message, "Tokens-Used: in=10 out=5", 1)
         self.assertTrailerCount(message, "Tool-Calls: 1", 1)
 
 
