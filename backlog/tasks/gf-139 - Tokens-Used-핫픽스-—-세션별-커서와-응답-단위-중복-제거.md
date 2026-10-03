@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-10-03 03:30'
-updated_date: '2026-10-03 03:36'
+updated_date: '2026-10-03 03:39'
 labels:
   - hooks
   - bug
@@ -58,3 +58,15 @@ GF-129는 GF-127→GF-128 재설계 뒤로 묶여 있어서, 값이 틀린 채�
 4. doc-16 갱신, GF-129 코멘트
 5. 실제 커밋으로 값 대조 (구현은 서브에이전트, 검토·커밋 확인은 메인)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+구현(서브에이전트, TDD):
+- 테스트 먼저(a096f1d): 새 세션 첫 커밋 / 예전 숫자 커서 / 같은 (requestId, message.id) 줄 1회 계상 / id 없는 줄 줄 단위 / 커서 경계를 걸친 응답 중복 방지 5건 추가, 기존 커서 기대값을 'fake-session <N>'으로 갱신. 구현 전 실행 시 11건 중 8건 실패 확인.
+- 구현(482fd24): hooks/post-commit의 aggregate_usage(lines, seen_keys)와 measure_claude_code_token_usage()만 수정. 커서 형식 '<세션 ID> <줄 수>'(개행 없음), 마지막 공백 기준 rsplit로 파싱. 세션 불일치·숫자만·손상 → 0줄부터. 같은 세션이면 커서 앞 구간을 aggregate_usage로 돌려 응답 키만 모으고(합산은 버림) 새 구간에서 그 키의 usage를 건너뜀. 앞 구간 파싱 실패도 transcript-parse-failed로 배치 실패 처리. 같은 응답의 usage는 첫 줄 값을 씀.
+- 결과: python3 -m unittest discover -s tests → Ran 98 tests, OK. ruff check hooks/ tests/ + python 훅 → All checks passed.
+- 실커밋 482fd24의 커서: '<세션 UUID> 1353' 형식으로 기록됨(Tokens-Used: 25915492, 이 값은 이번 세션의 첫 커밋 이후 구간 전체 합). DoD#3(응답 단위 별도 합산과 대조)은 메인에서 확인 필요.
+- doc-16에 '현재 post-commit 구현 (GF-139 핫픽스)' 절 추가, GF-129에 선반영 코멘트 남김.
+- 범위 밖 발견: doc-1 설치 가이드 표의 .gitformat-token-cursor 설명이 '(누적 줄 수)'로 남아 있음 — 손대지 않음.
+<!-- SECTION:NOTES:END -->
