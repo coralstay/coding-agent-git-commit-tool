@@ -1,11 +1,11 @@
 ---
 id: GF-141
 title: 훅 주석에 남은 pre-commit·bats 언급 정리
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-03 08:11'
-updated_date: '2026-10-03 12:18'
+updated_date: '2026-10-03 12:21'
 labels:
   - docs
   - hooks
@@ -36,13 +36,21 @@ documentation:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 prepare-commit-msg 첫머리 주석이 실제 동작(재생 면제·에디터 거부·마커 기록)과 일치한다
-- [ ] #2 commit-msg 주석이 가리키는 테스트 파일이 실제로 존재한다
-- [ ] #3 commit-msg finally 주석이 마커 작성 주체를 prepare-commit-msg로 적는다
-- [ ] #4 post-commit detect_verify_bypass() 주석이 마커 작성 주체를 prepare-commit-msg로 적는다
-- [ ] #5 동작 변경 없음 — 기존 테스트 전부 통과
-- [ ] #6 post-commit 첫머리 판단 근거 주석이 마커 작성 주체를 prepare-commit-msg로, 쓰는 조건을 실제대로 적는다
+- [x] #1 prepare-commit-msg 첫머리 주석이 실제 동작(재생 면제·에디터 거부·마커 기록)과 일치한다
+- [x] #2 commit-msg 주석이 가리키는 테스트 파일이 실제로 존재한다
+- [x] #3 commit-msg finally 주석이 마커 작성 주체를 prepare-commit-msg로 적는다
+- [x] #4 post-commit detect_verify_bypass() 주석이 마커 작성 주체를 prepare-commit-msg로 적는다
+- [x] #5 동작 변경 없음 — 기존 테스트 전부 통과
+- [x] #6 post-commit 첫머리 판단 근거 주석이 마커 작성 주체를 prepare-commit-msg로, 쓰는 조건을 실제대로 적는다
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. 각 AC의 주석을 실제 코드 동작에 맞게 고친다(주석만, 로직 불변).
+2. AC 하나(또는 같은 파일 두 줄)마다 전체 테스트와 ruff를 돌리고 커밋한다.
+3. 마지막에 main과 HEAD의 훅 AST가 같은지 비교해 동작 불변을 증명한다.
+<!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
 
@@ -52,4 +60,12 @@ AC1~4 주석 정정 완료(da3bae4, 889a100, a89e37e). 매 커밋 전 python3 -m
 AC 밖 발견: hooks/post-commit 첫머리(6행) "pre-commit은 시작 시점에 마커를 지우고, 통과하면 끝에 다시 쓴다" — pre-commit은 없고 prepare-commit-msg는 마커를 조건 없이 쓴다. 범위 확장 여부를 유저에게 확인 중.
 
 유저 승인(2026-10-03)으로 post-commit 첫머리 주석을 AC #6으로 추가.
+
+검증: python3 -m unittest discover -s tests 106건 OK(최종 0f40967 기준), ruff check 통과. main..HEAD 훅 3개의 ast.dump가 동일 — 바뀐 건 주석뿐이다. 주석이 가리키는 tests/test_config_keys_match_hooks.py 존재 확인, 훅에 pre-commit·.bats 언급이 남지 않음(GF-126 이력 서술 1곳은 사실이라 유지).
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+훅 주석 6곳이 이미 사라진 구조(pre-commit 훅, bats 테스트)를 설명하고 있어 실제 동작대로 고쳤다: prepare-commit-msg 역할(3가지), commit-msg의 테스트 참조와 finally 마커 주체, post-commit 첫머리와 detect_verify_bypass()의 마커 주체·조건. 로직 변경 없음 — main 대비 세 훅의 AST가 동일하고, 전체 테스트 106건과 ruff가 통과했다. AC #6은 작업 중 발견해 유저 승인으로 추가했다.
+<!-- SECTION:FINAL_SUMMARY:END -->
