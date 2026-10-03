@@ -1,8 +1,9 @@
 ---
 id: GF-138
 title: 프로젝트 목적을 재정의하고 git-logbook으로 개명한다
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-03 02:57'
 updated_date: '2026-10-03 02:58'
 labels:
@@ -54,3 +55,14 @@ README와 도구 이름은 이 프로젝트를 '커밋 메시지 형식을 정�
 - [ ] #3 git grep -i git-format -- ':!backlog' 결과에 의도한 예외만 남는다
 - [ ] #4 rename 뒤 git ls-remote origin 성공, 예전 URL 리다이렉트 확인
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. decision-25 기록 (AC#1,#2) → 커밋
+2. README 제목·소개·범위·clone URL 재작성 (AC#3,#4) → 커밋
+3. 나머지 표시 이름 치환: install.sh, hooks 주석, .gitmessage, CI, tests, backlog/config.yml (AC#5,#6) → 테스트 → 커밋
+4. GF-133에 설정 키 이전 AC 추가 (AC#7) → 커밋
+5. 서브에이전트로 diff 독립 검토
+6. PR → CI → 머지 커밋 병합 → gh repo rename → origin URL 갱신 (AC#8)
+<!-- SECTION:PLAN:END -->
