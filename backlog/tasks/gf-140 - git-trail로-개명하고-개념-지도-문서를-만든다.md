@@ -1,10 +1,11 @@
 ---
 id: GF-140
 title: git-trail로 개명하고 개념 지도 문서를 만든다
-status: To Do
-assignee: []
+status: Done
+assignee:
+  - '@claude'
 created_date: '2026-10-03 03:31'
-updated_date: '2026-10-03 03:35'
+updated_date: '2026-10-03 07:15'
 labels:
   - docs
   - naming
@@ -33,19 +34,41 @@ GF-138과 같은 원칙으로 설정 키 gitformat.*(GF-133), 태스크 접두�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 decision-26으로 이름을 git-trail로 바꾼다고 기록하고, decision-25의 이름 조항만 대체한다고 명시한다
-- [ ] #2 README, install.sh, 훅 주석, .gitmessage, CI, 테스트, backlog config, doc-1·5·6·20의 표시 이름 git-logbook이 git-trail로 바뀐다 (설정 키·파일명 gitformat.*은 제외)
-- [ ] #3 trail·provenance·attestation·audit 각각의 정의, 구현 위치(훅 함수·파일·설정·원격), 빈 곳을 적은 개념 지도 문서를 backlog doc으로 만든다
-- [ ] #4 개념 지도의 구현 위치는 실제 코드의 함수명·파일 경로와 일치한다
-- [ ] #5 README에서 개념 지도 문서로 안내한다
+- [x] #1 decision-26으로 이름을 git-trail로 바꾼다고 기록하고, decision-25의 이름 조항만 대체한다고 명시한다
+- [x] #2 README, install.sh, 훅 주석, .gitmessage, CI, 테스트, backlog config, doc-1·5·6·20의 표시 이름 git-logbook이 git-trail로 바뀐다 (설정 키·파일명 gitformat.*은 제외)
+- [x] #3 trail·provenance·attestation·audit 각각의 정의, 구현 위치(훅 함수·파일·설정·원격), 빈 곳을 적은 개념 지도 문서를 backlog doc으로 만든다
+- [x] #4 개념 지도의 구현 위치는 실제 코드의 함수명·파일 경로와 일치한다
+- [x] #5 README에서 개념 지도 문서로 안내한다
 - [ ] #6 PR을 머지 커밋으로 병합한 뒤 GitHub 저장소를 coralstay/git-trail로 rename하고 origin URL을 갱신한다
 - [ ] #7 GitHub 저장소 description과 topics에 trail·provenance·attestation·audit을 반영한다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 python3 -m unittest discover -s tests 전체 통과
-- [ ] #2 ruff check 통과
-- [ ] #3 git grep -i git-logbook -- ':!backlog' 결과에 의도한 예외만 남는다
+- [x] #1 python3 -m unittest discover -s tests 전체 통과
+- [x] #2 ruff check 통과
+- [x] #3 git grep -i git-logbook -- ':!backlog' 결과에 의도한 예외만 남는다
 - [ ] #4 rename 뒤 예전 URL 두 개(git-format, git-logbook)가 새 저장소로 리다이렉트되고 ruleset이 유지된다
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. decision-26 기록 → 커밋
+2. 표시 이름 git-logbook → git-trail 치환(README·install.sh·훅·테스트·CI·.gitmessage·config·doc-1/5/6/20) → 테스트 → 커밋
+3. 개념 지도 doc 신규(trail·provenance·attestation·audit, 실제 함수·파일 기준) + README 링크 → 커밋
+4. 서브에이전트 독립 검토(함수명·경로 대조)
+5. PR → 머지 커밋 → gh repo rename git-trail → origin 갱신 → description/topics → 리다이렉트 확인
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+검증: unittest 98개·ruff·shellcheck 통과. git grep -i git-logbook -- ':!backlog'는 README 개명 이력 줄만 남음. doc-6에는 git-logbook 문자열이 없어 바꿀 것이 없었음(AC#2). 개념 지도 doc-21은 서브에이전트가 함수명·경로·GitHub 설정을 코드와 실측으로 대조 — is_replay_commit 행의 오류(post-commit에는 면제 없음), --no-verify 우회 누락, 원격 보호 빈 곳 누락, %G? 서술을 반영해 고침. 유저 지시로 Tokens-Used 서술을 '설계 의도는 커밋당 토큰량, 현재 구현은 델타라 의도와 다름(GF-129)'으로 정정.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+이름을 git-trail로 바꾸고(decision-26, decision-25의 이름 조항만 대체) README·install.sh·훅 주석·테스트·CI·backlog config·doc-1/5/20의 표시 이름을 맞췄다. trail·provenance·attestation·audit이 어느 훅 함수·파일·원격 설정에 구현돼 있고 어디가 비어 있는지 doc-21로 정리해 README에서 연결했다. 테스트 98개·ruff·shellcheck 통과, doc-21은 코드·실측과 대조 검증. GitHub rename과 topics(AC#6·7, DoD#4)는 PR 머지 후 처리한다.
+<!-- SECTION:FINAL_SUMMARY:END -->

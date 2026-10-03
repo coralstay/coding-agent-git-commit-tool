@@ -26,7 +26,7 @@ class EndToEndCommitTest(IsolatedRepoTestCase):
         """[GF-135] 언어별 검사가 제거돼 ruff가 거부할 파일도 커밋을 막지 않는다
 
         GF-135 전에는 pyproject.toml이 있는 저장소의 `import os`(F401)가
-        checks/python.py의 ruff에 걸려 커밋이 막혔다. 지금은 git-logbook이 언어
+        checks/python.py의 ruff에 걸려 커밋이 막혔다. 지금은 git-trail이 언어
         도구를 전혀 실행하지 않는다(decision-23) — 이 단언이 없으면 lint가 슬그머니
         돌아와도 스위트가 똑같이 통과한다.
         """
@@ -63,7 +63,7 @@ class EndToEndCommitTest(IsolatedRepoTestCase):
         new_repo = self.temp_dir()
         self.make_repo(path=new_repo, hooks_path=None, env=env)
 
-        # init.templateDir이 .git/hooks/*를 git-logbook 클론을 가리키는 심볼릭 링크로
+        # init.templateDir이 .git/hooks/*를 git-trail 클론을 가리키는 심볼릭 링크로
         # 채웠는지부터 확인한다 — 이게 아니면 GF-16 시나리오 자체가 재현 안 된다.
         linked_hook = new_repo / ".git" / "hooks" / "prepare-commit-msg"
         self.assertTrue(

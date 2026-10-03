@@ -3,24 +3,24 @@ id: doc-1
 title: 설치 가이드
 type: guide
 created_date: '2026-09-19 05:27'
-updated_date: '2026-10-03 03:40'
+updated_date: '2026-10-03 03:44'
 ---
 ## 🚀 설치
 
 ### 기존 저장소에 적용
 
 ```sh
-git clone https://github.com/coralstay/git-logbook.git ~/git-logbook   # 원하는 위치에 한 번만 클론
+git clone https://github.com/coralstay/git-trail.git ~/git-trail   # 원하는 위치에 한 번만 클론
 cd ~/my-project
-~/git-logbook/install.sh
+~/git-trail/install.sh
 ```
 
-대상 디렉터리를 인자로 줘도 됩니다: `~/git-logbook/install.sh ~/my-project`.
+대상 디렉터리를 인자로 줘도 됩니다: `~/git-trail/install.sh ~/my-project`.
 
 ### 앞으로 만들 모든 새 저장소에 자동 적용
 
 ```sh
-~/git-logbook/install.sh --global
+~/git-trail/install.sh --global
 ```
 
 `git init`/`git clone`을 실행할 때마다 훅과 커밋 템플릿이 자동으로 심어집니다
@@ -35,10 +35,10 @@ cd ~/my-project
 
 | 대상              | 명령                                                           | 효과                                       |
 | ----------------- | -------------------------------------------------------------- | ------------------------------------------ |
-| 로컬(대상 저장소) | `git config core.hooksPath <git-logbook>/hooks`                 | `.git/hooks/`의 기존 로컬 훅을 완전히 대체 |
-| 로컬(대상 저장소) | `git config commit.template <git-logbook>/.gitmessage`          | 커밋 에디터에 스켈레톤 표시                |
-| 전역(`--global`)  | `git config --global init.templateDir <git-logbook>/template`   | 이후 모든 신규 저장소에 자동 적용          |
-| 전역(`--global`)  | `git config --global commit.template <git-logbook>/.gitmessage` | 위와 동일, 전역 기본값                     |
+| 로컬(대상 저장소) | `git config core.hooksPath <git-trail>/hooks`                 | `.git/hooks/`의 기존 로컬 훅을 완전히 대체 |
+| 로컬(대상 저장소) | `git config commit.template <git-trail>/.gitmessage`          | 커밋 에디터에 스켈레톤 표시                |
+| 전역(`--global`)  | `git config --global init.templateDir <git-trail>/template`   | 이후 모든 신규 저장소에 자동 적용          |
+| 전역(`--global`)  | `git config --global commit.template <git-trail>/.gitmessage` | 위와 동일, 전역 기본값                     |
 
 **실행 중 새로 생기는 파일**
 
@@ -46,7 +46,7 @@ cd ~/my-project
 | ------------------------- | ---------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- |
 | `.gitformat-verified`     | `<대상 저장소>/.git/`                    | `pre-commit` 통과 시 생성, `post-commit`이 곧 삭제 | 커밋 사이에 남지 않는 임시 마커                                         |
 | `.gitformat-token-cursor` | `<대상 저장소>/.git/`                    | Claude Code 실측 성공 시에만 `post-commit`이 갱신(`unavailable`일 때는 갱신 안 함) | `Tokens-Used`/`Tool-Calls` 델타 계산용 커서(`<세션 ID> <줄 수>`, 세션이 바뀌면 0줄부터, GF-139), 커밋 간 유지됨 |
-| `template/hooks/*`        | 이 git-logbook 클론 자신의 `template/` 안 | `install.sh --global` 실행 시                      | 클론 위치를 가리키는 심볼릭 링크, 커밋 안 됨(`.gitignore`)              |
+| `template/hooks/*`        | 이 git-trail 클론 자신의 `template/` 안 | `install.sh --global` 실행 시                      | 클론 위치를 가리키는 심볼릭 링크, 커밋 안 됨(`.gitignore`)              |
 
 **커밋 자체가 바뀌는 경우**: `post-commit`이 조건에 따라 `git commit --amend`로
 방금 만든 커밋의 footer에 트레일러를 추가합니다(README의 "훅 생애주기" 섹션과

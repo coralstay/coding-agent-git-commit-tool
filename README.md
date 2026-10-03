@@ -1,8 +1,8 @@
 <div align="center">
 
-# 📒 git-logbook
+# 👣 git-trail
 
-**git 이력을 작업 로그로 만드는 도구 — 커밋 형식 · 출처 기록 · 이력 불변**
+**git 이력을 감사 추적(audit trail)으로 만드는 도구 — 커밋 형식 · 출처 기록(provenance) · 이력 불변**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Hooks: Python 3](https://img.shields.io/badge/hooks-Python%203-3776ab.svg)](./hooks/)
@@ -66,7 +66,7 @@ Signed-off-by: cpu-once <231006716+cpu-once@users.noreply.github.com>
 | `Tokens-Used` | 이 커밋에 든 토큰. 작업 비용을 이력에서 읽게 합니다 | `post-commit` · 직전 커밋 이후 세션 구간의 델타(누적 아님) | 서버 발급 사실(Claude Code 한정), **측정 방법론은 실험 단계** |
 | `Tool-Calls` | 같은 구간의 도구 호출 수 | `post-commit` · `tool_use` 블록 개수 | 위와 동일 |
 | `Co-Authored-By` | 공동저자 귀속 | `post-commit` · `AI-Tool`이 `claude-code`일 때만 | 자동 |
-| `Hooks-Commit` | 이 커밋을 검사한 git-logbook 자체의 버전. 훅에 버그가 있었을 때 어느 커밋들이 그 훅을 거쳤는지 역추적합니다 | `post-commit` · 훅 클론의 `rev-parse --short HEAD` | 완전 자동, 모든 커밋 |
+| `Hooks-Commit` | 이 커밋을 검사한 git-trail 자체의 버전. 훅에 버그가 있었을 때 어느 커밋들이 그 훅을 거쳤는지 역추적합니다 | `post-commit` · 훅 클론의 `rev-parse --short HEAD` | 완전 자동, 모든 커밋 |
 | `Signed-off-by` | 커미터 정보(DCO 관례) | `post-commit` · `git log -1 --format='%cn <%ce>'` | 완전 자동, 모든 커밋 |
 | `Verify-Bypassed` | `--no-verify`로 검사를 건너뛴 사실. 우회를 막지는 못하니 대신 기록합니다(decision-3) | `post-commit` · `prepare-commit-msg`가 남긴 검증 마커의 **부재** | 자동 |
 | `Fixes` | 이 버그를 만든 커밋 | **사람이 씀**(원인 커밋을 아는 경우만) · `commit-msg`가 해시 실재를 검증 | 검증됨 |
@@ -78,10 +78,10 @@ Signed-off-by: cpu-once <231006716+cpu-once@users.noreply.github.com>
 ## 🪝 커밋 한 번에 훅이 도는 순서
 
 > 공식 문서: [githooks(5)](https://git-scm.com/docs/githooks). git이 제공하는 훅은 28개이고,
-> git-logbook의 훅은 지금 커밋 단계만 다룹니다. push된 이력의 보호는 원격 설정이 맡습니다
+> git-trail의 훅은 지금 커밋 단계만 다룹니다. push된 이력의 보호는 원격 설정이 맡습니다
 > ([다루는 범위](#-다루는-범위)).
 
-| 순서 | 훅 | 커밋 객체가 있는가 | `--no-verify`로 건너뛰나 | git-logbook이 하는 일 |
+| 순서 | 훅 | 커밋 객체가 있는가 | `--no-verify`로 건너뛰나 | git-trail이 하는 일 |
 | --- | --- | --- | --- | --- |
 | 1 | [`prepare-commit-msg`](hooks/prepare-commit-msg) | 아직 없음 | **건너뛸 수 없음** | 재생·병합 커밋 면제, 에디터 경로 거부, 검증 마커 기록 |
 | 2 | (에디터) | 아직 없음 | — | 사람이 메시지를 씁니다. 훅보다 **뒤**라서 1번은 최종 메시지를 볼 수 없습니다 |
@@ -104,6 +104,10 @@ git 이력을 작업 로그로 만드는 데 필요한 세 가지입니다(decis
 | **출처 기록** | 누가·어떤 도구와 모델로·얼마를 들여 만들었는지 자동으로 남김 | 위 트레일러 전체, `Task-Id` 브랜치 강제, `AI-Model` 게이트 | 측정 재작성(GF-129), 트레일러 집합 재정의(decision-19, `Signed-off-by`는 유지 — decision-25) |
 | **이력 불변** | 한 번 남긴 기록은 다시 쓰지 않음(append-only, decision-24) | 이 저장소의 GitHub 설정: 머지 커밋만 허용, main의 force push·삭제 금지(doc-20). 컨슈머는 doc-20을 참고해 직접 설정 | 로컬 훅 강제(DRAFT-18 append-only 훅 강제), CI 트레일러 검사(DRAFT-19) |
 
+용어로 말하면 trail(감사 추적)이 세 기둥 전체이고, provenance(출처 기록)가 두 번째 기둥입니다.
+attestation(서명된 증명)은 아직 없고, audit(사후 검사)은 커밋 시점 검사까지만 있습니다 —
+자세한 구현 위치는 [개념 지도(doc-21)](<backlog/docs/doc-21 - 개념-지도-—-trail·provenance·attestation·audit이-어디에-구현돼-있나.md>)를 보세요.
+
 세 기둥은 서로를 필요로 합니다. 이력이 다시 쓰이면 트레일러가 자기 커밋에 대해 거짓이
 되고, 기록할 내용이 정형화돼 있지 않으면 지킬 가치가 줄어듭니다. 로컬 훅은
 `--no-verify`를 막지 못합니다. 그렇게 다시 쓴 이력이 main에 force push되는 것은 원격
@@ -111,10 +115,10 @@ git 이력을 작업 로그로 만드는 데 필요한 세 가지입니다(decis
 
 **언어별 lint는 다루지 않습니다**(decision-23) — 세 기둥 어디에도 속하지 않고, 컨슈머에게
 npm/ruff/clang-format 같은 도구를 전제하게 만듭니다. 언어 검사가 필요하면 CI에서 돌리시기
-바랍니다. git-logbook이 `core.hooksPath`를 점유하므로 그 저장소의 `.git/hooks/*`는
+바랍니다. git-trail이 `core.hooksPath`를 점유하므로 그 저장소의 `.git/hooks/*`는
 무시되고, 자기 훅과 함께 쓰는 방법은 아직 정하지 않았습니다.
 
-> 이름을 git-format에서 git-logbook으로 바꿨습니다(decision-25). 설정 키와 파일명
+> 이름은 git-format → git-logbook → git-trail 순으로 바뀌었습니다(decision-25, decision-26). 설정 키와 파일명
 > (`gitformat.*`, `gitformat.conf`, `.gitformat-*`)은 기존 설치를 깨지 않도록 아직 예전 이름입니다(GF-133).
 
 구성은 Python 훅 + 설정 파일 하나(`hooks/gitformat.conf`) + POSIX sh 설치
@@ -151,17 +155,17 @@ python3는 이런 환경에서 보이지 않을 수 있습니다.
 ### 기존 저장소에 적용하는 방법입니다
 
 ```sh
-git clone https://github.com/coralstay/git-logbook.git ~/git-logbook   # 원하는 위치에 한 번만 클론
+git clone https://github.com/coralstay/git-trail.git ~/git-trail   # 원하는 위치에 한 번만 클론
 cd ~/my-project
-~/git-logbook/install.sh
+~/git-trail/install.sh
 ```
 
-대상 디렉터리를 인자로 주셔도 됩니다: `~/git-logbook/install.sh ~/my-project`.
+대상 디렉터리를 인자로 주셔도 됩니다: `~/git-trail/install.sh ~/my-project`.
 
 ### 앞으로 만들 모든 새 저장소에 자동 적용하는 방법입니다
 
 ```sh
-~/git-logbook/install.sh --global
+~/git-trail/install.sh --global
 ```
 
 `git init`/`git clone`을 실행할 때마다 훅과 커밋 템플릿이 자동으로 심어집니다
@@ -170,6 +174,9 @@ cd ~/my-project
 
 ## 📚 더 자세한 내용이 궁금하시다면
 
+- **trail·provenance·attestation·audit이 각각 어느 훅·함수·설정에 구현돼 있고 어디가
+  비어 있는지**는 [개념 지도(doc-21)](<backlog/docs/doc-21 - 개념-지도-—-trail·provenance·attestation·audit이-어디에-구현돼-있나.md>)에
+  정리했습니다.
 - **설치 상세, 커밋 메시지 규칙 전문, AI 귀속 트레일러 표, 커스터마이즈, 저장소 구조,
   주의점·한계**는 `backlog doc list`에서 확인하실 수 있습니다.
 - **설계 배경과 각 결정 이유**는 `backlog decision list`에서

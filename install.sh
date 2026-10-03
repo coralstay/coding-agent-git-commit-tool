@@ -1,10 +1,10 @@
 #!/bin/sh
-# git-logbook 설치 스크립트: 기존 저장소에 core.hooksPath와 commit.template을 설정하고
+# git-trail 설치 스크립트: 기존 저장소에 core.hooksPath와 commit.template을 설정하고
 # (decision-2), 훅 실행에 필요한 python3 존재를 확인한다(decision-16). 이 스크립트가
-# 위치한 git-logbook 클론 자체를 훅 소스로 사용한다.
+# 위치한 git-trail 클론 자체를 훅 소스로 사용한다.
 #
 # 사용법:
-#   /path/to/git-logbook/install.sh [target-repo-dir]
+#   /path/to/git-trail/install.sh [target-repo-dir]
 # target-repo-dir을 생략하면 현재 디렉터리를 대상으로 한다.
 set -eu
 
@@ -30,7 +30,7 @@ fi
 # 훅은 Python으로 실행된다(decision-16). 여기서 막지 않으면 설정은 다 끝난
 # 뒤 첫 커밋에서야 훅이 실행 실패로 깨져 원인을 찾기 어렵다.
 if ! command -v python3 >/dev/null 2>&1; then
-  echo "install.sh: python3을 찾을 수 없습니다 - git-logbook 훅은 Python으로 실행됩니다." >&2
+  echo "install.sh: python3을 찾을 수 없습니다 - git-trail 훅은 Python으로 실행됩니다." >&2
   exit 1
 fi
 
@@ -56,7 +56,7 @@ fi
 git -C "$TARGET" config core.hooksPath "$HOOKS_DIR"
 git -C "$TARGET" config commit.template "$GITMESSAGE"
 
-echo "git-logbook: ${TARGET} 설정 완료"
+echo "git-trail: ${TARGET} 설정 완료"
 echo "  core.hooksPath  = ${HOOKS_DIR}"
 echo "  commit.template = ${GITMESSAGE}"
 
@@ -88,10 +88,10 @@ case "$GLOBAL_MODE" in
     sync_template
     git config --global init.templateDir "$TEMPLATE_DIR"
     git config --global commit.template "$GITMESSAGE"
-    echo "git-logbook: 전역 init.templateDir/commit.template 설정 완료 (앞으로 만드는 새 저장소에 자동 적용)"
+    echo "git-trail: 전역 init.templateDir/commit.template 설정 완료 (앞으로 만드는 새 저장소에 자동 적용)"
     ;;
   no)
-    echo "git-logbook: 전역 설정은 건너뜁니다."
+    echo "git-trail: 전역 설정은 건너뜁니다."
     ;;
   ask)
     if [ -t 0 ]; then
@@ -102,18 +102,18 @@ case "$GLOBAL_MODE" in
           sync_template
           git config --global init.templateDir "$TEMPLATE_DIR"
           git config --global commit.template "$GITMESSAGE"
-          echo "git-logbook: 전역 init.templateDir/commit.template 설정 완료."
+          echo "git-trail: 전역 init.templateDir/commit.template 설정 완료."
           ;;
         *)
-          echo "git-logbook: 전역 설정은 건너뜁니다. 나중에: ${SELF_DIR}/install.sh --global"
+          echo "git-trail: 전역 설정은 건너뜁니다. 나중에: ${SELF_DIR}/install.sh --global"
           ;;
       esac
     else
-      echo "git-logbook: 비대화형 환경이라 전역 설정은 건너뜁니다. --global로 자동 적용 가능."
+      echo "git-trail: 비대화형 환경이라 전역 설정은 건너뜁니다. --global로 자동 적용 가능."
     fi
     ;;
 esac
 
-echo "git-logbook: 참고 - git push --no-verify는 로컬 훅으로 탐지할 수 없습니다."
+echo "git-trail: 참고 - git push --no-verify는 로컬 훅으로 탐지할 수 없습니다."
 echo "  push된 이력은 원격 설정이 지킵니다 - 대상 저장소의 원격(GitHub rulesets·병합 방식)을"
-echo "  직접 구성하세요 (예시: git-logbook 저장소의 backlog doc-20)."
+echo "  직접 구성하세요 (예시: git-trail 저장소의 backlog doc-20)."
