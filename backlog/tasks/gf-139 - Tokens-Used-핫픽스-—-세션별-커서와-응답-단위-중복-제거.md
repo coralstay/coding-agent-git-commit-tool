@@ -1,10 +1,11 @@
 ---
 id: GF-139
 title: Tokens-Used 핫픽스 — 세션별 커서와 응답 단위 중복 제거
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-03 03:30'
-updated_date: '2026-10-03 03:35'
+updated_date: '2026-10-03 03:36'
 labels:
   - hooks
   - bug
@@ -47,3 +48,13 @@ GF-129는 GF-127→GF-128 재설계 뒤로 묶여 있어서, 값이 틀린 채�
 - [ ] #2 ruff check 통과
 - [ ] #3 실제 커밋의 Tokens-Used가 트랜스크립트를 응답 단위로 따로 합산한 값과 일치하는지 확인
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. 테스트 먼저(TDD): 새 세션 첫 커밋, 같은 (requestId, message.id) 줄 1회 계상, 키 없는 줄 줄 단위, 예전 숫자 커서, 커서 경계를 걸친 응답 중복 방지
+2. hooks/post-commit의 measure_claude_code_token_usage()/aggregate_usage() 수정 — 커서 형식 '<session_id> <줄 수>'
+3. 기존 테스트의 커서 기대값 갱신
+4. doc-16 갱신, GF-129 코멘트
+5. 실제 커밋으로 값 대조 (구현은 서브에이전트, 검토·커밋 확인은 메인)
+<!-- SECTION:PLAN:END -->
