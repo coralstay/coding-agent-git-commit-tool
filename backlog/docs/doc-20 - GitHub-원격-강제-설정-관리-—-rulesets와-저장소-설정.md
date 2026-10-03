@@ -3,7 +3,7 @@ id: doc-20
 title: GitHub 원격 강제 설정 관리 — rulesets와 저장소 설정
 type: guide
 created_date: '2026-09-26 12:54'
-updated_date: '2026-10-03 03:44'
+updated_date: '2026-10-03 13:12'
 ---
 # GitHub 원격 강제 설정 관리
 
@@ -66,15 +66,15 @@ decision-24(append-only)는 **로컬 훅만으로 달성할 수 없다.** `--no-
 
 ```sh
 # 병합 방식
-gh api repos/coralstay/git-trail \
+gh api repos/coralstay/coding-agent-git-commit-tool \
   --jq '{allow_merge_commit, allow_rebase_merge, allow_squash_merge}'
 
 # ruleset 목록
-gh api repos/coralstay/git-trail/rulesets \
+gh api repos/coralstay/coding-agent-git-commit-tool/rulesets \
   --jq '.[] | "\(.name) | \(.enforcement) | id=\(.id)"'
 
 # 특정 ruleset 상세
-gh api repos/coralstay/git-trail/rulesets/23313297 \
+gh api repos/coralstay/coding-agent-git-commit-tool/rulesets/23313297 \
   --jq '{name, enforcement, include: .conditions.ref_name.include, rules: [.rules[].type]}'
 ```
 
@@ -82,11 +82,11 @@ gh api repos/coralstay/git-trail/rulesets/23313297 \
 
 ```sh
 # 병합 방식 변경
-gh api -X PATCH repos/coralstay/git-trail \
+gh api -X PATCH repos/coralstay/coding-agent-git-commit-tool \
   -f allow_merge_commit=true -F allow_rebase_merge=false -F allow_squash_merge=false
 
 # ruleset 갱신 (PUT은 전체 교체다 - 기존 규칙을 빠뜨리면 사라진다)
-gh api -X PUT repos/coralstay/git-trail/rulesets/23313297 --input ruleset.json
+gh api -X PUT repos/coralstay/coding-agent-git-commit-tool/rulesets/23313297 --input ruleset.json
 ```
 
 ## 함정

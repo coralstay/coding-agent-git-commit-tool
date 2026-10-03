@@ -3,7 +3,7 @@ id: doc-16
 title: 토큰·툴콜 측정 방법과 한계
 type: specification
 created_date: '2026-09-25 19:34'
-updated_date: '2026-10-03 07:30'
+updated_date: '2026-10-03 13:12'
 ---
 # 토큰·툴콜 측정 방법과 한계
 
@@ -90,7 +90,7 @@ GF-129 이전에는 `.git/.gitformat-token-cursor`(`<세션 ID> <줄 수>`)에 �
 | --- | --- | --- | --- | --- |
 | 1 | `Grep {pattern:"trailer"}` | 120,000 | 800 | 탈락 — 건드린 경로가 없다 |
 | 2 | `Read {file_path:"hooks/commit-msg"}` | 200,000 | 1,200 | 탈락 — 이 커밋의 파일이 아니다 |
-| 3 | `Edit {file_path:"/…/git-trail/hooks/post-commit"}` | 210,000 | 5,000 | **통과** — 정규화 후 완전 일치 |
+| 3 | `Edit {file_path:"/…/coding-agent-git-commit-tool/hooks/post-commit"}` | 210,000 | 5,000 | **통과** — 정규화 후 완전 일치 |
 | 4 | `Bash {command:"ruff check hooks/post-commit"}` | 30,000 | 400 | **통과** — 명령에 경로가 있다 |
 | 5 | 설계 논의 (도구 호출 0개) | 180,000 | 2,000 | 탈락 — 매칭할 입력이 없다 |
 
@@ -109,7 +109,7 @@ GF-129 이전에는 `.git/.gitformat-token-cursor`(`<세션 ID> <줄 수>`)에 �
   - 경로 뒤: 문자열 끝, 또는 경로를 이어 쓰는 글자(영숫자 `_ . - /`)가 아닌 것.
     `hooks/post-commit-old`, `a.txt.bak`는 다른 파일이다.
   - 하위 디렉터리 안의 파일(`hooks/post-commit`)은 경로 앞에 `/`도 허용한다 — 절대경로나
-    `../git-trail/hooks/post-commit`도 잡힌다. `myhooks/post-commit`은 잡히지 않는다.
+    `../coding-agent-git-commit-tool/hooks/post-commit`도 잡힌다. `myhooks/post-commit`은 잡히지 않는다.
   - **파일명이나 파일명 앞토큰으로는 매칭하지 않는다** — `cd hooks && cat post-commit`은 귀속되지
     않는다. `README.md` 같은 흔한 이름이나 `a.txt` → `a` 같은 짧은 토큰이 무관한 응답을 끌어오는
     것을 막기 위해서다.

@@ -3,9 +3,9 @@ id: doc-21
 title: 개념 지도 — trail·provenance·attestation·audit이 어디에 구현돼 있나
 type: specification
 created_date: '2026-10-03 03:46'
-updated_date: '2026-10-03 07:30'
+updated_date: '2026-10-03 13:12'
 ---
-git-trail이라는 이름(decision-26)과 설명에 쓰는 네 용어가 이 저장소에서 실제로 무엇을 가리키는지
+git-trail이라는 이전 이름(decision-26)과 설명에 쓰는 네 용어가 이 저장소에서 실제로 무엇을 가리키는지
 정리한다. 용어마다 **뜻 → 구현 위치 → 빈 곳** 순서다. 구현 위치는 함수 이름과 파일 경로로 적는다
 (줄 번호는 바뀌므로 적지 않는다). 훅이 도는 순서는 README "커밋 한 번에 훅이 도는 순서"를 본다.
 
@@ -20,7 +20,7 @@ git-trail이라는 이름(decision-26)과 설명에 쓰는 네 용어가 이 저
 
 ## trail — 감사 추적
 
-**뜻**: 누가·언제·무엇을 했는지 순서대로 남기고, 남긴 것은 고치지 않는 기록. git-trail에서는
+**뜻**: 누가·언제·무엇을 했는지 순서대로 남기고, 남긴 것은 고치지 않는 기록. coding-agent-git-commit-tool에서는
 커밋 이력 자체가 trail이고, 트레일러가 그 기록의 항목이며, append-only 정책이 "고치지 않음"을 지킨다.
 
 **구현 위치**
@@ -43,7 +43,7 @@ git-trail이라는 이름(decision-26)과 설명에 쓰는 네 용어가 이 저
 ## provenance — 출처 기록
 
 **뜻**: 결과물이 어디서, 무엇으로, 어떻게 만들어졌는지에 대한 기록. SLSA(공급망 보안 표준)의 용어다.
-git-trail에서는 커밋마다 붙는 출처 트레일러가 provenance다.
+coding-agent-git-commit-tool에서는 커밋마다 붙는 출처 트레일러가 provenance다.
 
 **구현 위치** — 모든 트레일러는 `hooks/post-commit`이 붙인다.
 
@@ -53,7 +53,7 @@ git-trail에서는 커밋마다 붙는 출처 트레일러가 provenance다.
 | `AI-Tool`, `AI-Tool-Version`, `Co-Authored-By` | `trailer_ai_tool()` | `AI_AGENT` 환경변수(Claude Code가 주입) | — |
 | `AI-Model` | `trailer_ai_model()` → `read_transcript_model()`, `claude_transcript_path()` | Claude Code: 세션 트랜스크립트의 `message.model` / 그 외: `gitformat.aiModel` 설정 | `hooks/commit-msg`의 `enforce_ai_model_gate()` — Claude Code 외 도구는 `gitformat.knownModel` 목록에 있어야 함 |
 | `Tokens-Used`, `Tool-Calls` | `trailer_tokens_used()` → `measure_claude_code_token_usage()` → `read_transcript_entries()`, `group_responses()`, `commit_target_paths()`, `AttributionMatcher`, `attributed_record_load()`/`attributed_record_save()` | 세션·서브에이전트 트랜스크립트에서 이 커밋이 바꾼 파일을 건드린 응답의 `message.usage`를 응답 단위로 합산(커밋당 귀속, decision-27). 귀속 기록 `<git-dir>/.gitformat-token-attributed`(GF-129) | — |
-| `Hooks-Commit` | `trailer_hooks_commit()` | 훅이 들어 있는 git-trail 클론의 `rev-parse --short HEAD` | — |
+| `Hooks-Commit` | `trailer_hooks_commit()` | 훅이 들어 있는 coding-agent-git-commit-tool 클론의 `rev-parse --short HEAD` | — |
 | `Signed-off-by` | `trailer_signed_off_by()` | 커밋 시점의 커미터(`%cn <%ce>`) | — (decision-25로 유지) |
 
 측정 방법과 한계의 상세는 doc-16, 트레일러별 레퍼런스는 doc-3, 에이전트 판정 신호는 doc-17.
@@ -71,12 +71,12 @@ git-trail에서는 커밋마다 붙는 출처 트레일러가 provenance다.
 Sigstore, GitHub artifact attestations). "누가 그렇다고 주장했다"가 아니라 "그 주장이 위조되지
 않았음을 확인할 수 있다"가 핵심이다.
 
-**구현 위치 — git-trail 자체에는 없다.**
+**구현 위치 — coding-agent-git-commit-tool 자체에는 없다.**
 
 | 무엇 | 어디 | 비고 |
 | --- | --- | --- |
 | 트레일러 | 커밋 메시지 안의 평문 | 서명되지 않은 주장. 누구나 손으로 쓸 수 있다 |
-| 커밋 서명 | 사용자의 git 설정(`commit.gpgsign`, `gpg.format=ssh`) | git-trail이 설정하지 않는다. 켜져 있으면 `post-commit`의 amend로 만들어진 최종 커밋도 다시 서명되므로 트레일러까지 서명 범위에 들어간다 |
+| 커밋 서명 | 사용자의 git 설정(`commit.gpgsign`, `gpg.format=ssh`) | coding-agent-git-commit-tool이 설정하지 않는다. 켜져 있으면 `post-commit`의 amend로 만들어진 최종 커밋도 다시 서명되므로 트레일러까지 서명 범위에 들어간다 |
 | 서명 강제 | GitHub ruleset `required_signatures` | 켜지 않았다(decision-24, DRAFT-20) |
 
 **빈 곳**
