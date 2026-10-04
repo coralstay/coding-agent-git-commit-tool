@@ -33,7 +33,7 @@ jobs:
       - name: Install ruff
         run: pip install --quiet ruff
       # ruff에 디렉터리를 넘기면 확장자가 .py인 파일만 훑는다(실측 확인). git이
-      # 이름을 고정하는 훅 2개(prepare-commit-msg/post-commit)는 확장자가
+      # 이름을 고정하는 훅(prepare-commit-msg, GF-128부터 하나)은 확장자가
       # 없어, Python으로 포팅돼도 hooks/ 하나만 지정하면 조용히 검사에서 빠진다 -
       # 검사가 아무것도 안 하고 통과하는 GF-32와 같은 유형이다. 그래서 셔뱅으로
       # Python 파일을 찾아 함께 넘긴다. 이 근거는 GF-135로 hooks/checks/*.py가

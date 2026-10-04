@@ -158,7 +158,10 @@ class TokenUsageMeasurementTest(IsolatedRepoTestCase):
         self.assertTrailerCount(message, "Tokens-Used: in=0 out=0", 1)
         self.assertTrailerCount(message, "Tool-Calls: 1", 1)
         self.assertNotIn("no-attributed-turn", message)
-        self.assertNotIn("unavailable", message)
+        # AI-Agent의 model-unavailable(이 가짜 트랜스크립트엔 model이 없다)과 구분하려고
+        # 측정 트레일러만 본다.
+        self.assertNotIn("Tokens-Used: unavailable", message)
+        self.assertNotIn("Tool-Calls: unavailable", message)
 
     def test_귀속된_응답이_없으면_no_attributed_turn을_남긴다(self):
         """[GF-129] 어떤 응답도 커밋 파일을 건드리지 않았으면 in=0 out=0 (no-attributed-turn)이다"""
@@ -246,6 +249,103 @@ class TokenUsageMeasurementTest(IsolatedRepoTestCase):
         message = self.commit_ai("[feat] root file matching", home)
         self.assertTrailerCount(message, "Tokens-Used: in=11 out=11", 1)
         self.assertTrailerCount(message, "Tool-Calls: 2", 1)
+
+    # ── 대상 경로는 커밋될 인덱스에서 온다 (GF-128) ───────────────
+    #
+    # GF-128부터 측정은 커밋 객체가 생기기 전(prepare-commit-msg)에 돈다. 대상 경로는
+    # git이 GIT_INDEX_FILE로 넘기는 "커밋될 인덱스"와 HEAD의 차이다 — -a와 <경로>
+    # 커밋은 임시 인덱스를 쓰므로(git 2.54.0 실측) .git/index를 직접 보면 틀린다.
+
+    def baseline(self):
+        self.stage("a.txt", "b.txt")
+        self.git_ok("commit", "-q", "-m", "[feat] baseline", env={"AI_AGENT": None})
+
+    def test_commit_a는_스테이징하지_않은_수정_파일도_대상으로_삼는다(self):
+        """[GF-128] git commit -a로 커밋하는 수정 파일(스테이징 안 됨)을 건드린 응답도 귀속한다"""
+        self.baseline()
+        home = self.fake_home()
+        self.write_transcript(home, response("req-1", "msg-1", [edit("a.txt")], 10, 5))
+        self.write("a.txt", "changed\n")
+        self.assertAccepted(
+            self.commit("[feat] commit all", "-a", env=self.claude_env(home))
+        )
+        message = self.head_message()
+        self.assertTrailerCount(message, "Tokens-Used: in=10 out=5", 1)
+        self.assertTrailerCount(message, "Tool-Calls: 1", 1)
+
+    def test_경로를_지정한_커밋은_그_경로만_대상으로_삼는다(self):
+        """[GF-128] git commit <경로>는 지정한 파일만 대상이고, 스테이징만 된 다른 파일은 빠진다"""
+        self.baseline()
+        home = self.fake_home()
+        self.write_transcript(
+            home,
+            response("req-a", "msg-a", [edit("a.txt")], 10, 5)
+            + response("req-b", "msg-b", [edit("b.txt")], 1000, 500),
+        )
+        self.write("a.txt", "changed\n")
+        # b.txt는 스테이징만 해 두고 이번 커밋에서는 뺀다.
+        self.write("b.txt", "staged only\n")
+        self.git_ok("add", "b.txt")
+        self.assertAccepted(
+            self.git(
+                "commit", "-m", "[feat] commit path", "--", "a.txt",
+                env=self.claude_env(home),
+            )
+        )
+        message = self.head_message()
+        self.assertTrailerCount(message, "Tokens-Used: in=10 out=5", 1)
+        # b.txt를 건드린 응답은 아직 귀속되지 않았다 — 다음 커밋 몫이다.
+        self.assertNotIn("req-b msg-b", self.record_lines())
+
+    def test_amend는_원래_커밋_위에_새로_얹는_변경만_대상으로_삼는다(self):
+        """[GF-128] --amend -m은 HEAD 대비 새로 스테이징한 파일을 건드린 응답만 귀속한다"""
+        home = self.fake_home()
+        self.write_transcript(home, response("req-1", "msg-1", [edit("a.txt")], 10, 5))
+        self.stage("a.txt")
+        self.commit_ai("[feat] amend original", home)
+
+        self.write_transcript(
+            home,
+            response("req-2", "msg-2", [edit("b.txt")], 7, 3)
+            # 원래 커밋의 파일만 읽은 응답 — amend가 a.txt를 바꾸지 않으므로 빠진다.
+            + response("req-3", "msg-3", [tool_use("Read", file_path="a.txt")], 900, 90),
+        )
+        self.stage("b.txt")
+        self.assertAccepted(
+            self.commit("[feat] amended", "--amend", env=self.claude_env(home))
+        )
+        message = self.head_message()
+        self.assertTrailerCount(message, "Tokens-Used: in=7 out=3", 1)
+        self.assertEqual(
+            ["fake-session", "req-1 msg-1", "req-2 msg-2"], self.record_lines()
+        )
+
+    def test_amend_no_edit은_측정하지_않아_응답을_소비하지_않는다(self):
+        """[GF-128] 앞 커밋의 Tokens-Used/Tool-Calls를 들고 오는 --amend --no-edit은 측정을 건너뛰어 귀속 기록을 바꾸지 않는다"""
+        home = self.fake_home()
+        self.write_transcript(home, response("req-1", "msg-1", [edit("a.txt")], 10, 5))
+        self.stage("a.txt")
+        self.commit_ai("[feat] keep trailers", home)
+        before = self.record_lines()
+
+        # 새 응답이 있어도, 트레일러 키가 이미 있어 값을 못 남기므로 소비하면 안 된다.
+        self.write_transcript(home, response("req-2", "msg-2", [edit("b.txt")], 7, 3))
+        self.stage("b.txt")
+        self.assertAccepted(
+            self.git("commit", "--amend", "--no-edit", env=self.claude_env(home))
+        )
+        self.assertEqual(before, self.record_lines())
+        self.assertTrailerCount(self.head_message(), "Tokens-Used: in=10 out=5", 1)
+
+    def test_거부된_커밋은_귀속_기록을_바꾸지_않는다(self):
+        """[GF-128] 검증에서 거부된 커밋은 측정 전에 멈춰 응답을 소비하지 않는다"""
+        home = self.fake_home()
+        self.write_transcript(home, response("req-1", "msg-1", [edit("a.txt")], 10, 5))
+        self.stage("a.txt")
+        self.assertRejected(self.commit("형식 없는 제목", env=self.claude_env(home)))
+        self.assertFalse(self.git_dir_file(RECORD_NAME).exists())
+        message = self.commit_ai("[feat] retry after rejection", home)
+        self.assertTrailerCount(message, "Tokens-Used: in=10 out=5", 1)
 
     # ── 한 응답은 한 커밋에만 ─────────────────────────────────────
 
@@ -424,13 +524,13 @@ class TokenUsageMeasurementTest(IsolatedRepoTestCase):
         self.stage("a.txt")
         # prepare-commit-msg의 AI-Model 게이트(decision-5)는 claude-code 외 AI 도구가 감지되면
         # gitformat.aiModel이 설정돼 있을 것을 요구한다 — 이 테스트의 관심사는 그
-        # 게이트 통과 이후 post-commit의 분기이므로 먼저 채워둔다.
+        # 게이트 통과 이후 트레일러 삽입의 분기이므로 먼저 채워둔다.
         self.git_ok("config", "gitformat.aiModel", "gpt-5")
         self.assertAccepted(
             self.commit("[feat] other ai tool", env={"AI_AGENT": "other-tool_1-0"})
         )
         message = self.head_message()
-        self.assertTrailerCount(message, "AI-Tool: other-tool", 1)
+        self.assertTrailerCount(message, "AI-Agent: other-tool/1.0 (gpt-5)", 1)
         self.assertTrailerCount(
             message, "Tokens-Used: unavailable (no-usage-channel)", 1
         )
