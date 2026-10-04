@@ -40,8 +40,8 @@ class ConfigFileUnreadableTest(IsolatedRepoTestCase):
     def test_prepare_commit_msg가_멈춘다(self):
         """prepare-commit-msg(python): conf가 깨지면 명확한 에러로 즉시 멈춘다"""
         # GF-126에서 pre-commit이 삭제되며 가드 검증 대상이 이 훅으로 옮겨왔다.
-        # GF-135에서 언어별 검사가 사라진 뒤에도 이 훅은 gitformat.markerFile을
-        # conf에서 읽으므로 가드가 여전히 필요하다.
+        # 이 훅은 커밋 type 목록·길이 제한·트레일러 키를 conf에서 읽으므로 가드가
+        # 여전히 필요하다.
         msg_file = self.write("msgfile", "[feat] test\n")
         self.assertConfGuardFires(
             self.python(self.hooks_copy / "prepare-commit-msg", msg_file)

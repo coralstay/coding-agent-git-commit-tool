@@ -4,7 +4,8 @@
 브랜치 쪽은 test_branch_task_id_required.py가 맡는다. GF-127에서 검증이 commit-msg에서
 prepare-commit-msg로 옮겨오고 commit-msg는 삭제됐다 — 아래 케이스는 전부 실제
 `git commit`을 태우는 블랙박스 테스트라 그대로 새 경로를 검증한다. 옮겨오며 생긴
-동작(--no-verify로 우회 불가, git revert 제목 예외, 거부 시 마커 없음)은 맨 아래에 있다.
+동작(--no-verify로 우회 불가, git revert 제목 예외)은 맨 아래에 있다. 거부 시 마커가
+남지 않는지 보던 케이스는 GF-128에서 검증마커 자체가 사라지며 함께 없어졌다.
 
 decision-8: 표준 인증이 아니라 실제 버그 이력(GF-30, GF-34, GF-35)에 근거한 실용적
 테스트. GF-82에서 서브젝트가 [type][subsystem] 프리픽스로 바뀌었고, GF-83에서 제목
@@ -242,15 +243,6 @@ class MessageFormatTest(IsolatedRepoTestCase):
     def test_revert_제목도_본문_빈_줄_규칙은_지킨다(self):
         """[GF-127] revert 제목 예외는 제목 형식·길이만이다 — 빈 줄 규칙은 그대로다"""
         self.assertRejected(self.commit('Revert "[feat] x"\n바로 이어진 본문'))
-
-    # ── 거부하면 검증 마커가 남지 않는다 (GF-31 → GF-127) ────────────
-
-    def test_거부되면_스테일_마커도_남지_않는다(self):
-        """[GF-31] 이전 실행의 마커가 남아 있어도 검증에서 거부되면 마커가 지워진다"""
-        marker = self.git_dir_file(".gitformat-verified")
-        marker.write_text("0 0\n", encoding="utf-8")
-        self.assertRejected(self.commit("형식 없는 제목"))
-        self.assertFalse(marker.exists(), "거부된 커밋 뒤에 마커가 남았다")
 
     # ── type 목록이 비면 원인을 밝히며 멈춘다 (GF-76 → GF-127) ─────────
 

@@ -35,7 +35,6 @@ import os
 import re
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 # 로케일이 UTF-8을 제공하지 않는 환경에서는 Python의 stdout 인코딩이 ascii로 떨어져,
@@ -51,15 +50,6 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(encoding="utf-8", errors="replace")
     except (AttributeError, ValueError, OSError):
         pass
-
-# post-commit이 트레일러를 붙이려고 도는 `git commit --amend`는 이 훅을 다시 실행시킨다
-# — --no-verify는 prepare-commit-msg를 건너뛰지 못하기 때문이다(doc-15). 그대로 두면
-# post-commit이 지운 검증마커를 amend 쪽에서 다시 써서 $GIT_DIR에 남긴다(GF-126 실측:
-# 정상 커밋 뒤에도 마커가 남아 테스트가 잡았다). amend는 메시지만 바꾸므로 이 훅의
-# 판단이 달라질 여지가 없으니, post-commit이 넘기는 가드를 보고 즉시 빠져나간다.
-# 이 가드는 post-commit과 함께 GF-128에서 사라진다.
-if os.environ.get("_GITFORMAT_AMEND_GUARD") == "1":
-    sys.exit(0)
 
 # git이 넘기는 인자. $1=메시지 파일, $2=source. 인자가 없는 호출은 git에서 오지
 # 않지만, 그때 IndexError로 죽는 대신 빈 값으로 두면 아래 판단이 무해하게 통과한다.
@@ -128,9 +118,6 @@ def local_get_all(key):
         ).stdout.splitlines()
         if line
     ]
-
-
-MARKER = os.path.join(GIT_DIR, conf_get("gitformat.markerFile"))
 
 
 def fail(*lines):
@@ -202,25 +189,6 @@ def reject_editor_path():
         '  예: git commit -m "[feat][hooks] 설명"',
         "  긴 본문은 파일에 써서 git commit -F <파일>로 넘기세요.",
     )
-
-
-# 이전 실행에서 남은 검증마커는 판단을 시작하기 전에 무효화한다(GF-31). 마커가 "이번
-# 커밋에서 이 훅이 돌았다"는 뜻이어야 하는데, 앞선 커밋이 마커를 쓴 뒤 다른 이유로
-# 실패해 그 마커를 남겼으면 그 값이 다음 커밋으로 새어든다. 마커가 gate로서의 의미를
-# 잃은 뒤에도(아래 write_verified_marker() 참고) 이 무효화는 남는다 — 마커의 나이가
-# 판정에 쓰이지는 않지만, "직전 실행이 남긴 파일"이 그대로 살아 있는 상태를 만들지
-# 않는다.
-#
-# 거부 경로보다 **앞에서** 지우는 이유: 예전에는 commit-msg가 거부할 때 finally에서
-# 마커를 지웠다(GF-31) — prepare-commit-msg가 먼저 마커를 써둔 뒤 commit-msg가 커밋을
-# 막으면 post-commit이 돌지 않아 마커가 남았기 때문이다. 검증이 이 훅으로 옮겨온 뒤에는
-# 지우기를 앞당기고 쓰기를 맨 뒤에 두는 것만으로 같은 불변조건이 선다 — 에디터 거부든
-# 검증 거부든 예기치 못한 예외든, 이 훅이 0이 아닌 상태로 끝나면 마커가 없다.
-def invalidate_stale_marker():
-    try:
-        os.remove(MARKER)
-    except OSError:
-        pass
 
 
 def message_lines():
@@ -1196,32 +1164,13 @@ def insert_trailers():
             pass
 
 
-# 검증마커 기록 — **임시 가교다. GF-128에서 post-commit과 함께 제거한다.**
+# 실행 순서(decision-18): 재생·병합 커밋 면제 → 에디터 경로 거부 → 메시지 검증 →
+# 트레일러 삽입.
 #
-# **이 마커는 더 이상 아무것도 gate하지 않는다.** GF-126까지는 "언어별 lint를 전부
-# 통과했다"는 뜻이었지만 GF-135에서 그 lint를 지웠으므로(decision-23) 지금 남은 뜻은
-# "prepare-commit-msg가 돌았다"뿐이다. 메시지 검증이 이 훅으로 옮겨온(GF-127) 뒤로는
-# 검증을 통과한 커밋에서만 써지지만, post-commit이 그 사실을 판정에 쓰지는 않는다.
-#
-# 그런데도 계속 써야 하는 이유는 post-commit이다. post-commit은 이 마커의 **부재**를
-# --no-verify 우회의 증거로 읽어 Verify-Bypassed: true를 붙인다(decision-3, GF-31).
-# 아무도 마커를 쓰지 않게 되면 아직 살아 있는 post-commit이 **모든 커밋에** 그 트레일러를
-# 붙인다 — 이 저장소는 자기 훅으로 커밋하므로 잘못된 footer가 실제 이력에 남는다(GF-126
-# 실측). 형식과 위치는 기존 계약 그대로 — $GIT_DIR/<gitformat.markerFile>에
-# "<epoch> <pid>" 한 줄이다. 바꾸면 post-commit의 판정이 깨진다.
-#
-# 이 훅은 --no-verify로도 건너뛸 수 없으므로(doc-15) 통과한 커밋에는 마커가 항상
-# 써지고, 따라서 **Verify-Bypassed는 사실상 도달 불가능하다.** 남는 경로는 재생
-# 커밋뿐이다 — 맨 위 면제로 먼저 빠져나가 마커가 없으니 post-commit이 그 트레일러를
-# 여전히 큐에 넣는다. 다만 그 경로에서는 amend 자체가 실패해(archive DRAFT-18) 커밋에
-# 남지 않는다(GF-126 실측).
-def write_verified_marker():
-    with open(MARKER, "w", encoding="utf-8") as f:
-        f.write(f"{int(time.time())} {os.getpid()}\n")
-
-
-# 실행 순서(decision-18): 재생·병합 커밋 면제 → (스테일 마커 무효화) → 에디터 경로
-# 거부 → 메시지 검증 → 검증마커 기록.
+# GF-128 전에는 이 사이에 검증마커($GIT_DIR/.gitformat-verified) 무효화와 기록이
+# 있었다. 그 마커의 유일한 소비자는 post-commit의 Verify-Bypassed 판정이었고,
+# post-commit과 그 트레일러가 함께 사라져 마커도 지웠다. 맨 위에 있던 amend 재귀
+# 가드(_GITFORMAT_AMEND_GUARD)도 post-commit의 --amend가 없어져 함께 지웠다.
 #
 # 면제가 맨 앞인 것은 바꿀 수 없다. 에디터로 여는 병합/revert 커밋은 source가 template이
 # 아니라 merge로 오지만(실측), 면제를 뒤로 미루면 사람이 메시지를 고를 수조차 없는
@@ -1230,9 +1179,6 @@ def write_verified_marker():
 # 에디터 거부가 검증보다 앞인 것은 검증할 메시지가 아직 없기 때문이다 — 순서를
 # 바꾸면 에디터 커밋이 "-m을 쓰라"는 안내 대신 형식 오류로 거부돼 원인이 가려진다.
 #
-# 스테일 마커 무효화를 거부 경로보다 앞에 두고 마커 기록을 맨 뒤에 두므로, 이 훅이
-# 거부로 끝나면 마커가 남지 않는다(invalidate_stale_marker()의 주석 참고).
-#
 # 검증은 트레일러 삽입보다 먼저 돈다(GF-127 AC #8) — 사람이 쓴 부분만 검증 대상이다.
 # 순서를 바꾸면 훅이 붙인 트레일러가 본문 길이 검증 등을 받고, 사람이 쓴 메시지가
 # 아니라 훅 자신의 출력 때문에 커밋이 거부될 수 있다. 검증에서 거부되면 삽입(과 토큰
@@ -1240,16 +1186,11 @@ def write_verified_marker():
 #
 # 재생·병합 커밋은 면제로 먼저 빠져나가므로 트레일러도 붙지 않는다(GF-128 AC #8).
 # 재생 커밋은 원래 커밋의 트레일러를 그대로 들고 온다.
-#
-# 파일 맨 위의 amend 가드는 이 순서보다 앞서 돈다 — post-commit의 재진입 차단과 같은
-# 규약이라 그 위치를 유지한다.
 if is_replay_commit():
     sys.exit(0)
 
-invalidate_stale_marker()
 reject_editor_path()
 validate_message()
 insert_trailers()
-write_verified_marker()
 
 sys.exit(0)

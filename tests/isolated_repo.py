@@ -42,14 +42,11 @@ BROKEN_CONF = "this is not valid git-config syntax [[[\n"
 # 된다. bats 판은 그 케이스에서만 `env -u`로 지웠지만, 여기서는 기본값으로 지워
 # 모든 테스트가 실행 환경과 무관하게 같은 결과를 내게 한다 — AI 경로를 검증하는
 # 테스트는 필요한 값을 명시적으로 넘긴다.
-# _GITFORMAT_AMEND_GUARD: 값이 새어들어오면 post-commit이 즉시 빠져나가 트레일러가
-# 하나도 붙지 않는다.
 # GIT_*: 러너가 훅/래퍼 안에서 실행될 때 새어들어오면 임시 저장소가 아니라 이
 # 저장소의 인덱스를 건드린다.
 _STRIPPED_ENV = (
     "AI_AGENT",
     "CLAUDE_CODE_SESSION_ID",
-    "_GITFORMAT_AMEND_GUARD",
     "GIT_DIR",
     "GIT_WORK_TREE",
     "GIT_INDEX_FILE",
