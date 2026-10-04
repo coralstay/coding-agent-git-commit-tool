@@ -1,56 +1,64 @@
-"""AI 여부와 무관하게 항상 붙는 트레일러(Hooks-Commit, Signed-off-by)를 본다.
+"""Hooks-Commit과 Signed-off-by를 본다.
 
-구 robustness-post-commit.bats(GF-25, GF-82)의 해당 케이스. 트레일러 삽입은
-`git commit --amend`로 이뤄지고 그 amend가 post-commit을 다시 발동시키므로,
-_GITFORMAT_AMEND_GUARD가 재귀를 끊는지도 여기서 본다.
+구 robustness-post-commit.bats(GF-25, GF-82)의 해당 케이스에서 출발했다. Hooks-Commit은
+AI 여부와 무관하게 항상 붙는다. Signed-off-by는 decision-30부터 AI 도구가 감지되지 않은
+커밋(사람 커밋)에만 붙는다 — DCO에서 이 트레일러는 사람의 인증이기 때문이다.
+
+GF-128 전에는 post-commit이 `git commit --amend`로 트레일러를 붙였고 그 amend가
+post-commit을 다시 발동시켜, 재귀 가드(_GITFORMAT_AMEND_GUARD)가 유한 시간 안에
+끝내는지도 여기서 봤다. 삽입이 prepare-commit-msg의 메시지 파일 쓰기로 바뀌어 amend도
+재귀도 없어졌으므로 그 케이스는 사라졌다.
 """
 
-import subprocess
 import unittest
 
 from isolated_repo import HOOKS_DIR, SIGNED_OFF_BY, IsolatedRepoTestCase
 
 
 class UnconditionalTrailerTest(IsolatedRepoTestCase):
-    def test_Signed_off_by가_커미터_정보로_삽입된다(self):
-        """[GF-82] 정상 커밋에 Signed-off-by가 커미터 정보로 자동 삽입된다"""
+    def setUp(self):
+        super().setUp()
         self.write("a.txt", "hi\n")
         self.git_ok("add", "a.txt")
+
+    def test_사람_커밋에는_Signed_off_by가_커미터_정보로_붙는다(self):
+        """[GF-82/decision-30] AI_AGENT가 없는 커밋에 Signed-off-by가 커미터 정보로 한 번 붙는다"""
         self.assertAccepted(self.commit("[feat] signed off commit"))
-        self.assertTrailerCount(
-            self.head_message(), f"Signed-off-by: {SIGNED_OFF_BY}", 1
+        message = self.head_message()
+        self.assertTrailerCount(message, f"Signed-off-by: {SIGNED_OFF_BY}", 1)
+        self.assertTrailerCount(message, "Signed-off-by:", 1)
+
+    def test_에이전트_커밋에는_Signed_off_by가_붙지_않는다(self):
+        """[decision-30] AI_AGENT=claude-code_... 커밋에는 Signed-off-by가 붙지 않는다"""
+        home = self.fake_home()
+        self.assertAccepted(
+            self.commit("[feat] agent commit", env=self.claude_env(home))
         )
+        message = self.head_message()
+        self.assertTrailerKeyAbsent(message, "Signed-off-by")
+        # 같은 신호로 AI-Agent가 붙었는지까지 봐야 "에이전트 커밋으로 판정됐다"가 증명된다.
+        self.assertTrailerCount(message, "AI-Agent:", 1)
+
+    def test_에이전트_커밋에_사람이_쓴_Signed_off_by는_그대로_남는다(self):
+        """[decision-30] 운영자가 메시지에 직접 쓴 Signed-off-by는 에이전트 커밋에서도 보존된다"""
+        home = self.fake_home()
+        self.assertAccepted(
+            self.commit(
+                "[feat] agent commit signed by human\n\nSigned-off-by: Jane <j@e.com>",
+                env=self.claude_env(home),
+            )
+        )
+        message = self.head_message()
+        self.assertTrailerCount(message, "Signed-off-by:", 1)
+        self.assertTrailerCount(message, "Signed-off-by: Jane <j@e.com>", 1)
 
     def test_Hooks_Commit이_훅_저장소의_HEAD로_한_번_붙는다(self):
         """Hooks-Commit이 이 커밋을 검증한 훅 코드의 커밋 해시로 정확히 한 번 붙는다 (decision-5)"""
-        # bats 판은 Hooks-Commit의 부재만 확인했고(python3 부재 케이스) 값이 맞는지는
-        # 본 적이 없다. 개수까지 보는 단언으로 값을 직접 고정한다.
         expected = self.git_ok(
             "-C", HOOKS_DIR, "rev-parse", "--short", "HEAD"
         ).stdout.strip()
-        self.write("a.txt", "hi\n")
-        self.git_ok("add", "a.txt")
         self.assertAccepted(self.commit("[feat] hooks commit trailer"))
-        message = self.head_message()
-        self.assertTrailerCount(message, f"Hooks-Commit: {expected}", 1)
-
-    def test_재귀_가드가_유한_시간_안에_끝낸다(self):
-        """[재귀가드] --no-verify + AI 트레일러가 붙는 커밋도 유한 시간 안에 끝난다"""
-        self.write("a.txt", "hi\n")
-        self.git_ok("add", "a.txt")
-        # GF-97 이후 이 커밋에는 AI-Tool: other-tool과 함께 Tokens-Used/Tool-Calls:
-        # unavailable (no-usage-channel)이 붙지만, 이 테스트의 관심사는 재귀 가드가
-        # 유한 시간 안에 끝나는지이지 트레일러 값 자체가 아니다.
-        try:
-            result = self.commit(
-                "[feat] recursion guard check",
-                "--no-verify",
-                env={"AI_AGENT": "other-tool_1-0"},
-                timeout=10,
-            )
-        except subprocess.TimeoutExpired:
-            self.fail("post-commit이 10초 안에 끝나지 않았다 - 재귀 가드가 깨졌다")
-        self.assertAccepted(result)
+        self.assertTrailerCount(self.head_message(), f"Hooks-Commit: {expected}", 1)
 
 
 if __name__ == "__main__":

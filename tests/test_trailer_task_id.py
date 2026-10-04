@@ -1,6 +1,6 @@
-"""post-commit이 브랜치명에서 Task-Id 트레일러를 만들어 붙이는지 본다(decision-4).
+"""prepare-commit-msg가 브랜치명에서 Task-Id 트레일러를 만들어 붙이는지 본다(decision-4).
 
-commit-msg가 이미 브랜치명의 <prefix>-<번호> 패턴을 강제했으므로(없으면 예외
+prepare-commit-msg가 이미 브랜치명의 <prefix>-<번호> 패턴을 강제했으므로(없으면 예외
 브랜치가 아닌 한 커밋 자체가 거부된다 - test_branch_task_id_required.py), 여기서는
 같은 패턴이 트레일러로 정확히 한 번 남는지, 예외 브랜치에서는 아예 붙지 않는지를
 본다. bats 판은 부분 문자열 존재만 봤고 개수를 세지 않았다.

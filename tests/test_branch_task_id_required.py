@@ -1,4 +1,4 @@
-"""commit-msg가 브랜치명의 Task-Id 패턴을 강제하는지 본다(decision-4).
+"""prepare-commit-msg가 브랜치명의 Task-Id 패턴을 강제하는지 본다(decision-4).
 
 구 robustness-commit-msg.bats(GF-23)의 브랜치 관련 케이스. <prefix>-<번호> 패턴이
 없으면 예외 브랜치가 아닌 한 커밋을 거부한다. 예외 목록은 로컬 오버라이드와 내장

@@ -18,12 +18,8 @@ from isolated_repo import CONF_FILE, GITFORMAT_ROOT, HOOKS_DIR
 GITMESSAGE = GITFORMAT_ROOT / ".gitmessage"
 
 # gitformat.conf를 키 단위로 읽는 파일들. install.sh는 `--list`로 읽기 가능 여부만
-# 보고 개별 키는 읽지 않으므로 여기 없다.
-CONF_READERS = (
-    HOOKS_DIR / "prepare-commit-msg",
-    HOOKS_DIR / "commit-msg",
-    HOOKS_DIR / "post-commit",
-)
+# 보고 개별 키는 읽지 않으므로 여기 없다. post-commit은 GF-128에서 삭제됐다.
+CONF_READERS = (HOOKS_DIR / "prepare-commit-msg",)
 
 # 훅이 실제로 쓰는 conf 읽기 형태를 그대로 뽑는다: conf_get("...") /
 # conf_get_all("...") 헬퍼 호출이다. GF-135까지는 `--file CONF ... --get`를 인라인으로
@@ -87,7 +83,7 @@ class ConfigKeysMatchHooksTest(unittest.TestCase):
                 value, f"누락되거나 빈 값: {key} (참조: {', '.join(sources)})"
             )
 
-        # 트레일러 키는 섹션 전체를 동적으로 읽어 대조한다. commit-msg는 본문 줄
+        # 트레일러 키는 섹션 전체를 동적으로 읽어 대조한다. prepare-commit-msg는 본문 줄
         # 길이 예외 판정에 이 섹션을 통째로(--get-regexp) 쓰므로, 이름으로 참조되지
         # 않는 키(예: trailer.breakingChange)도 실제로 쓰인다 — 그래서 "훅이 이름으로
         # 참조하는 트레일러 키 ⊆ 섹션"만 요구하고, 섹션의 모든 값이 비어있지 않은지는
