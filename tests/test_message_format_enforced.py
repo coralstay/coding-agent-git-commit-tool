@@ -65,13 +65,17 @@ class MessageFormatTest(IsolatedRepoTestCase):
     def test_claude_code면_aiModel_없이도_통과한다(self):
         """[결정테이블] AI_AGENT=claude-code면 aiModel 미설정이어도 통과한다"""
         self.assertAccepted(
-            self.commit("[feat] claude code agent", env={"AI_AGENT": "claude-code_2-1-0"})
+            self.commit(
+                "[feat] claude code agent", env={"AI_AGENT": "claude-code_2-1-0"}
+            )
         )
 
     def test_비_claude_도구에_aiModel_미설정이면_거부된다(self):
         """[결정테이블] 비-claude-code 도구 + aiModel 미설정이면 거부된다"""
         self.assertRejected(
-            self.commit("[feat] other tool no model", env={"AI_AGENT": "other-tool_1-0"})
+            self.commit(
+                "[feat] other tool no model", env={"AI_AGENT": "other-tool_1-0"}
+            )
         )
 
     def test_화이트리스트에_없는_aiModel은_거부된다(self):
@@ -171,10 +175,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
 
     def test_등록된_트레일러_토큰_줄은_72자를_넘어도_통과한다(self):
         """[GF-83] 등록된 트레일러 토큰으로 시작하는 줄은 72자를 넘어도 통과한다"""
-        self.assertAccepted(
-            self.commit("[feat] 제목\n\nBREAKING CHANGE: " + "y" * 70)
-        )
-
+        self.assertAccepted(self.commit("[feat] 제목\n\nBREAKING CHANGE: " + "y" * 70))
 
     # ── --no-verify로 우회할 수 없다 (GF-127, decision-18) ───────────
 
@@ -229,7 +230,12 @@ class MessageFormatTest(IsolatedRepoTestCase):
 
     def test_revert_비슷한_손글씨_제목은_거부된다(self):
         """[GF-127] 따옴표 없는 Revert 제목이나 다른 git 자동 제목은 예외가 아니다"""
-        for subject in ("Revert 되돌림", 'revert "소문자"', 'Revert ""', "fixup! [feat] x"):
+        for subject in (
+            "Revert 되돌림",
+            'revert "소문자"',
+            'Revert ""',
+            "fixup! [feat] x",
+        ):
             with self.subTest(subject=subject):
                 self.assertRejected(self.commit(subject))
 
@@ -245,6 +251,44 @@ class MessageFormatTest(IsolatedRepoTestCase):
         marker.write_text("0 0\n", encoding="utf-8")
         self.assertRejected(self.commit("형식 없는 제목"))
         self.assertFalse(marker.exists(), "거부된 커밋 뒤에 마커가 남았다")
+
+    # ── type 목록이 비면 원인을 밝히며 멈춘다 (GF-76 → GF-127) ─────────
+
+    def test_type_목록이_비면_원인을_밝히며_거부된다(self):
+        """[GF-76] conf에 gitformat.type이 하나도 없으면 조용히 통과하지 않고 원인을 밝힌다"""
+        hooks_copy = self.copy_hooks()
+        self.run_cmd_ok(
+            [
+                "git",
+                "config",
+                "--file",
+                hooks_copy / "gitformat.conf",
+                "--unset-all",
+                "gitformat.type",
+            ]
+        )
+        self.git_ok("config", "core.hooksPath", str(hooks_copy))
+        result = self.commit("[feat] 정상 제목")
+        self.assertRejected(result)
+        self.assertIn("type 목록을 읽을 수 없습니다", result.output)
+
+    def test_type_목록이_비면_revert_제목도_거부된다(self):
+        """[GF-127] revert 제목 예외가 깨진 설정을 가리지 않는다"""
+        hooks_copy = self.copy_hooks()
+        self.run_cmd_ok(
+            [
+                "git",
+                "config",
+                "--file",
+                hooks_copy / "gitformat.conf",
+                "--unset-all",
+                "gitformat.type",
+            ]
+        )
+        self.git_ok("config", "core.hooksPath", str(hooks_copy))
+        result = self.commit('Revert "[feat] x"')
+        self.assertRejected(result)
+        self.assertIn("type 목록을 읽을 수 없습니다", result.output)
 
 
 if __name__ == "__main__":
