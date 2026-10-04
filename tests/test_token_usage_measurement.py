@@ -422,7 +422,7 @@ class TokenUsageMeasurementTest(IsolatedRepoTestCase):
     def test_claude_code_외_도구는_no_usage_channel로_명시된다(self):
         """[GF-97] claude-code 외 AI 도구가 감지되면 unavailable (no-usage-channel)로 명시된다"""
         self.stage("a.txt")
-        # commit-msg 게이트(decision-5)는 claude-code 외 AI 도구가 감지되면
+        # prepare-commit-msg의 AI-Model 게이트(decision-5)는 claude-code 외 AI 도구가 감지되면
         # gitformat.aiModel이 설정돼 있을 것을 요구한다 — 이 테스트의 관심사는 그
         # 게이트 통과 이후 post-commit의 분기이므로 먼저 채워둔다.
         self.git_ok("config", "gitformat.aiModel", "gpt-5")
