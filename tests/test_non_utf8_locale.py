@@ -54,7 +54,7 @@ class NonUtf8LocaleTest(IsolatedRepoTestCase):
     # ── stderr 경로: 거부 메시지가 읽을 수 있는 한국어여야 한다 ─────
 
     def test_거부_메시지가_깨지지_않는다(self):
-        """[GF-116] 로케일이 UTF-8이 아니어도 commit-msg 거부 메시지가 깨지지 않는다"""
+        """[GF-116] 로케일이 UTF-8이 아니어도 prepare-commit-msg 거부 메시지가 깨지지 않는다"""
         self.write("a.txt", "hi\n")
         self.git_ok("add", "a.txt")
 

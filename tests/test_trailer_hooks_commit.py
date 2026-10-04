@@ -41,6 +41,10 @@ class UnconditionalTrailerTest(IsolatedRepoTestCase):
         # GF-97 이후 이 커밋에는 AI-Tool: other-tool과 함께 Tokens-Used/Tool-Calls:
         # unavailable (no-usage-channel)이 붙지만, 이 테스트의 관심사는 재귀 가드가
         # 유한 시간 안에 끝나는지이지 트레일러 값 자체가 아니다.
+        # GF-127 전에는 --no-verify가 commit-msg의 AI-Model 게이트까지 건너뛰었지만,
+        # 그 게이트가 --no-verify로 건너뛸 수 없는 prepare-commit-msg로 옮겨왔으므로
+        # 게이트를 통과할 모델을 먼저 설정한다.
+        self.git_ok("config", "gitformat.aiModel", "gpt-5")
         try:
             result = self.commit(
                 "[feat] recursion guard check",
