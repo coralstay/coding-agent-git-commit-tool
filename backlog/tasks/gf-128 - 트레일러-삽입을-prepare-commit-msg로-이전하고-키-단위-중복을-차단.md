@@ -1,10 +1,11 @@
 ---
 id: GF-128
 title: 트레일러 삽입을 prepare-commit-msg로 이전하고 키 단위 중복을 차단
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-09-25 19:33'
-updated_date: '2026-10-03 12:48'
+updated_date: '2026-10-04 01:58'
 labels:
   - hooks
   - trailers
@@ -15,10 +16,12 @@ references:
   - decision-18
   - decision-25
   - decision-28
+  - decision-30
 documentation:
   - backlog/docs/doc-13 - git-format-재설계-계획-—-커밋-규칙을-prepare-commit-msg로-통합.md
   - backlog/docs/doc-14 - 용어-정리-—-턴-트랜스크립트-귀속-마커-구분.md
   - backlog/docs/doc-18 - 재설계-작업-순서와-의존성.md
+  - backlog/docs/doc-22 - 유사-프로젝트-조사-—-AI-커밋-출처-기록-도구-비교.md
 modified_files:
   - hooks/prepare-commit-msg
   - hooks/post-commit
@@ -48,7 +51,7 @@ type: feature
 - [ ] #7 재귀 가드가 필요 없어져 제거된다
 - [ ] #8 git rebase로 커밋을 재생해도 트레일러가 추가되지 않고 훅이 실패하지도 않는다
 - [ ] #9 같은 커밋에서 hooks/post-commit을 삭제한다 — 남겨두면 prepare가 넣은 트레일러에 post-commit이 Signed-off-by와 Verify-Bypassed를 또 붙여 이 저장소의 실제 이력에 잘못된 footer가 남는다
-- [ ] #10 Verify-Bypassed 트레일러를 더 이상 삽입하지 않는다. Signed-off-by는 계속 삽입한다(decision-25가 decision-19의 제거 조항을 대체)
+- [ ] #10 Verify-Bypassed 트레일러를 더 이상 삽입하지 않는다. Signed-off-by는 AI 도구가 감지되지 않은 커밋에만 삽입한다(decision-30이 decision-25·28의 유지 조항을 대체)
 <!-- AC:END -->
 
 ## Definition of Done
