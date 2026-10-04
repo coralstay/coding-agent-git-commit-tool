@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-25 19:33'
-updated_date: '2026-10-04 01:39'
+updated_date: '2026-10-04 01:49'
 labels:
   - hooks
   - validation
@@ -51,6 +51,20 @@ type: feature
 - [ ] #2 ruff check 통과
 - [ ] #3 이 저장소 자신의 커밋이 새 훅으로 정상 생성되는지 확인
 <!-- DOD:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+구현(0d9df83, a57d038):
+- commit-msg의 검증 함수(형식·길이·빈 줄·Fixes·브랜치 Task-Id·AI-Model 게이트, type 목록 비면 중단)를 동작 그대로 prepare-commit-msg로 옮기고 같은 커밋에서 hooks/commit-msg를 삭제했다(AC #9). 오류 메시지 접두어만 prepare-commit-msg:로 바뀌었다.
+- 실행 순서: 재생·병합 면제 → 스테일 마커 무효화 → 에디터 경로 거부 → validate_message() → 마커 기록. 무효화를 거부 경로보다 앞에 두어 거부·예외로 끝나면 마커가 남지 않는다(GF-31의 commit-msg finally 정리를 대체).
+- 메시지 파일은 주석 제거 전 원문이다. commit-msg와 같게 열 0의 '#' 줄만 빼고 commit.cleanup/core.commentChar는 보지 않는다(-m/-F 경로에서 이 훅과 구 commit-msg가 보는 내용은 같다).
+- revert 제목 예외(유저 결정 b): 'Revert "..."'와 'Reapply "..."'를 fullmatch로 인정. git 2.54.0 실측으로 revert의 revert는 'Reapply "<제목>"'이 되므로 함께 넣었다. 중첩은 바깥 따옴표만 보므로 통과한다. 이 제목은 50자 제한에서도 뺀다(git이 원래 제목에 접두어를 붙여 50자 제목의 revert는 60자). 본문 72자·빈 줄 규칙은 그대로 적용.
+- --amend 모호성(source=commit)은 알려진 한계로 validate_message() 주석에 남겼다.
+- AC #8: 트레일러는 아직 post-commit이 커밋 뒤에 붙이므로 검증이 먼저 돈다. GF-128에서 삽입을 validate_message() 뒤에 둬야 한다고 주석에 적었다.
+- 테스트: --no-verify 우회 불가(형식·길이·브랜치), clean revert --no-edit 통과, 60자 revert 제목 통과, Reapply·그 revert 통과, revert 비슷한 손글씨 제목 거부, 거부 시 스테일 마커 제거를 추가. commit-msg 전용 케이스(conf 가드, python3 부재)는 삭제하고, --no-verify로 검증을 피하던 테스트 2개와 Task-Id 없는 브랜치에서 준비 커밋을 만들던 replay 테스트를 고쳤다. install 테스트는 commit-msg 링크가 정리되는지 확인하도록 바꿨다(install.sh 변경 없음).
+- 결과: python3 -m unittest discover -s tests → Ran 113 tests OK, ruff check . 통과. 이 저장소의 커밋 0d9df83이 새 훅으로 생성됐고, --no-verify로 형식 틀린 커밋은 거부됐다.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
