@@ -1,10 +1,11 @@
 ---
 id: GF-127
 title: 커밋 메시지 검증을 prepare-commit-msg로 이전
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-09-25 19:33'
-updated_date: '2026-09-26 02:35'
+updated_date: '2026-10-04 01:39'
 labels:
   - hooks
   - validation
@@ -83,5 +84,11 @@ prepare-commit-msg로 옮기는 순간 clean revert가 전부 거부된다. 기�
 
 함께 결정할 것: 같은 태스크에 걸린 --amend 모호성(GF-125 코멘트 #1) — source=commit이
 --amend --no-edit(최종 메시지)과 --amend(뒤에 에디터 열림)를 구분하지 못한다.
+---
+
+author: @claude
+created: 2026-10-04 01:39
+---
+2026-10-04 유저 결정: clean revert 문제는 (b)로 간다 — git이 만드는 'Revert "..."' 제목을 제목 규칙의 예외로 인정한다. 면제(a)는 cherry-pick까지 넓어지고, (c)는 git 기본 동작을 막는다. --amend 모호성(source=commit)은 이 태스크에서 해결하지 않고 알려진 한계로 남긴다.
 ---
 <!-- COMMENTS:END -->
