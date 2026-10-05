@@ -58,7 +58,7 @@ decision-24(append-only)는 **로컬 훅만으로 달성할 수 없다.** `--no-
 | 규칙 | 상태 | 조건 |
 | --- | --- | --- |
 | `required_signatures` | 끔 | 현재 이 저장소 커밋은 `%G?`가 `N`으로 나온다. 켜면 자기 push가 막힌다. 서명 설정(ssh-agent에 키 등록 등)을 먼저 정리한 뒤 검토 |
-| `pull_request` (PR 필수) | 끔 | 로컬 claude-rails 훅이 이미 main 직접 push를 막고 있다. 이중으로 걸 가치가 있는지 판단 필요 |
+| `pull_request` (PR 필수) | 끔 | 로컬 claude-code-agile-hooks 훅이 이미 main 직접 push를 막고 있다. 이중으로 걸 가치가 있는지 판단 필요 |
 | `required_status_checks` | 끔 | CI 통과를 병합 조건으로 강제할지. 지금은 사람이 확인하고 병합한다 |
 | 대상을 `~ALL`로 확대 | 끔 | 현재 `main`만 보호한다. task 브랜치까지 force push를 막으면 "push 후 rebase 금지"가 완전해지지만, 운영 부담을 먼저 판단해야 한다 |
 
