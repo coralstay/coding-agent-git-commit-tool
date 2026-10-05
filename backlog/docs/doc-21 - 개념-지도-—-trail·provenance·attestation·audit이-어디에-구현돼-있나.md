@@ -37,7 +37,7 @@ git-trail이라는 이전 이름(decision-26)과 설명에 쓰는 네 용어가 
 **빈 곳**
 - 로컬에서 cherry-pick·`--amend`·squash를 막지 않는다. `is_replay_commit()`은 면제만 한다. 차단은 DRAFT-18 계획.
 - 재생·병합 커밋의 기록이 의도와 다르다. revert에는 트레일러가 붙지만, cherry-pick·rebase 중에는 `post-commit`의 amend가 실패해(트레이스백) 붙지 않고, `git merge`는 `post-commit`을 아예 실행하지 않아 붙지 않는다. 의도(merge·revert는 기록, 재생은 면제)는 decision-24, DRAFT-18, GF-128에서 만든다.
-- 원격 보호는 이 저장소의 main 브랜치뿐이다. task 브랜치와 태그는 보호되지 않고, main 직접 push도 원격이 막지 않는다(로컬 claude-rails 훅만 막는다, DRAFT-20). 컨슈머 저장소는 각자 설정해야 한다(README, doc-20).
+- 원격 보호는 이 저장소의 main 브랜치뿐이다. task 브랜치와 태그는 보호되지 않고, main 직접 push도 원격이 막지 않는다(로컬 interlock 훅만 막는다, DRAFT-20). 컨슈머 저장소는 각자 설정해야 한다(README, doc-20).
 - 웹 UI 커밋과 PR 머지 버튼으로 만든 머지 커밋은 훅을 거치지 않아 트레일러가 하나도 없다(DRAFT-19).
 
 ## provenance — 출처 기록
