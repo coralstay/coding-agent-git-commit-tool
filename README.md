@@ -4,7 +4,7 @@
 
 **코딩 에이전트의 git 커밋을 검사하고, 누가·어떤 모델로·무슨 태스크로·얼마를 들여 만들었는지 커밋에 자동으로 기록하는 git 훅**
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](./LICENSE)
 [![Hooks: Python 3](https://img.shields.io/badge/hooks-Python%203-3776ab.svg)](./hooks/)
 [![Installer: POSIX sh](https://img.shields.io/badge/installer-POSIX%20sh-89e051.svg)](./install.sh)
 [![Requires: git + python3](https://img.shields.io/badge/requires-git%20%2B%20python3-brightgreen.svg)](#-필요조건을-말씀드립니다)
@@ -186,5 +186,11 @@ cd ~/my-project
 - **설계 배경과 각 결정 이유**는 `backlog decision list`에서
   확인하실 수 있습니다.
 - **작업 단위와 진행 상황**은 `backlog board`에서 확인하실 수 있습니다.
-- **라이선스**는 MIT입니다(전문: [`LICENSE`](./LICENSE)) — 외부 문서를 원문 그대로
+- **라이선스**는 GNU AGPL-3.0입니다(전문: [`LICENSE`](./LICENSE), [GNU AGPL-3.0 원문](https://www.gnu.org/licenses/agpl-3.0.html)) — 외부 문서를 원문 그대로
   vendoring하지 않는다는 점도 함께 말씀드립니다(decision-14).
+  - **상용 라이선스 —** 저작권자가 단독이므로 듀얼 라이선스가 가능합니다. AGPL 조건(네트워크
+    서비스 제공 시 수정 소스 공개)이 맞지 않는 상용 사용은 별도로 협의합니다.
+    문의: <coralstay3595@gmail.com> (또는 이 저장소의 GitHub Issue).
+  - **기여 —** 듀얼 라이선스 유지를 위해, 기여자는 자신의 기여를 AGPL-3.0과 상용 라이선스 양쪽으로
+    배포할 권리를 저작권자에게 허여하는 데 동의한 것으로 봅니다.
+  - **이전 배포 —** 커밋 `a7a57e1` 시점까지는 MIT로 배포되었고 그 스냅샷은 계속 MIT입니다.
