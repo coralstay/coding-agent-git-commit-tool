@@ -22,4 +22,4 @@
 `GF-<번호>` 패턴(`gitformat.taskPrefixDefault`)을 찾아 `Task-Id` 트레일러를
 강제로 붙인다 — backlog CLI의 태스크 접두어(`GF`)와 git-format 자신의 훅 기본값이
 같은 문자열을 쓰도록 우연이 아니라 의도적으로 맞춰져 있다. 다른 backlog.md
-프로젝트(예: claude-rails, 접두어 `task`)를 옮겨 다닐 때 이 점이 헷갈릴 수 있다.
+프로젝트(예: claude-code-agile-hooks, 접두어 `task`)를 옮겨 다닐 때 이 점이 헷갈릴 수 있다.
