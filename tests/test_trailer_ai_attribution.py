@@ -40,7 +40,7 @@ class TrailerAiAttributionTest(IsolatedRepoTestCase):
         )
 
     def test_사람_커밋에는_AI_트레일러가_전혀_붙지_않는다(self):
-        """[GF-97] 사람 커밋(AI 도구 미감지)에는 Tokens-Used/Tool-Calls가 전혀 붙지 않는다"""
+        """[GF-97] 사람 커밋(AI 도구 미감지)에는 AI-Agent가 붙지 않는다(Tokens-Used/Tool-Calls는 GF-146#3 이후 어떤 커밋에도 붙지 않는다)"""
         # AI_AGENT/CLAUDE_CODE_SESSION_ID는 헬퍼가 자식 환경에서 기본적으로 지운다 —
         # 이 스위트를 Claude Code로 돌리면 셸 환경에 이미 노출돼 있어(GF-97 검증 중
         # 실제로 발견) 지우지 않으면 "사람 커밋"이 조용히 AI 커밋이 된다.
@@ -53,7 +53,7 @@ class TrailerAiAttributionTest(IsolatedRepoTestCase):
         self.assertTrailerKeyAbsent(message, "Tool-Calls")
 
     def test_밑줄과_점이_든_경로에서도_트랜스크립트를_찾는다(self):
-        """[GF-98] 저장소 경로에 밑줄/점이 있어도 Claude Code 실제 슬러그 규칙으로 트랜스크립트를 찾아 AI-Agent의 모델과 Tokens-Used/Tool-Calls가 채워진다"""
+        """[GF-98/GF-146#3] 저장소 경로에 밑줄/점이 있어도 Claude Code 실제 슬러그 규칙으로 트랜스크립트를 찾아 AI-Agent의 모델이 채워지고, Tokens-Used/Tool-Calls는 붙지 않는다"""
         # Claude Code의 실제 규칙은 "영숫자가 아닌 모든 문자를 하이픈으로 치환"이다.
         # GF-98 이전에는 훅도 테스트도 `/`만 치환해 둘 다 틀렸으니 우연히 일치하며
         # 버그를 못 잡았다. 저장소 최상위 디렉터리 이름 자체에 밑줄/점을 넣어(하위
@@ -70,15 +70,8 @@ class TrailerAiAttributionTest(IsolatedRepoTestCase):
                     "type": "assistant",
                     "message": {
                         "model": "claude-slug-fix-test",
+                        # GF-146 전이라면 측정·귀속됐을 usage다. 지금은 모델만 읽는다.
                         "usage": {"input_tokens": 10, "output_tokens": 5},
-                        # 커밋할 a.txt를 건드린 응답이라야 Tokens-Used에 귀속된다(GF-129).
-                        "content": [
-                            {
-                                "type": "tool_use",
-                                "name": "Edit",
-                                "input": {"file_path": "a.txt"},
-                            }
-                        ],
                     },
                 }
             ],
@@ -98,8 +91,9 @@ class TrailerAiAttributionTest(IsolatedRepoTestCase):
         self.assertTrailerCount(
             message, "AI-Agent: claude-code/2.1.0 (claude-slug-fix-test)", 1
         )
-        self.assertTrailerCount(message, "Tokens-Used: in=10 out=5", 1)
-        self.assertTrailerCount(message, "Tool-Calls: 1", 1)
+        # GF-146#3: 측정은 별도 컴포넌트로 옮겼다(decision-31).
+        self.assertTrailerKeyAbsent(message, "Tokens-Used")
+        self.assertTrailerKeyAbsent(message, "Tool-Calls")
 
     # ── AI-Agent 조립과 축약(AC #5, #6) ─────────────────────────────
 
