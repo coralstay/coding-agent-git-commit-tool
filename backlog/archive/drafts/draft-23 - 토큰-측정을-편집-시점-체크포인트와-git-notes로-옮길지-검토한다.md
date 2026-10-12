@@ -4,7 +4,7 @@ title: 토큰 측정을 편집 시점 체크포인트와 git notes로 옮길지 
 status: Draft
 assignee: []
 created_date: '2026-10-04 01:43'
-updated_date: '2026-10-04 01:43'
+updated_date: '2026-10-12 10:02'
 labels:
   - measurement
   - spike
@@ -36,3 +36,12 @@ git-ai는 다르게 한다(doc-22).
 - [ ] #2 notes 저장 시 push·fetch·rebase에서 기록이 살아남는지 실측한다
 - [ ] #3 채택·기각 여부를 decision으로 기록한다
 <!-- AC:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-10-12 10:02
+---
+보관: 토큰 측정은 별도 컴포넌트로 이관(GF-146). coding-agent-git-commit-tool은 커밋 포맷만 맞춘다(decision-31). 편집 시점 체크포인트 · git notes 방식은 새 측정 컴포넌트에서 검토한다.
+---
+<!-- COMMENTS:END -->

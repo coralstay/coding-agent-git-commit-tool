@@ -4,7 +4,7 @@ title: 다른 AI 코딩 도구용 Tokens-Used/Tool-Calls 실측 채널 지원 �
 status: Done
 assignee: []
 created_date: '2026-09-19 01:21'
-updated_date: '2026-09-25 02:52'
+updated_date: '2026-10-12 10:02'
 labels: []
 dependencies: []
 references:
@@ -62,6 +62,15 @@ GF-97에서 trailer_tokens_used()를 AI_TOOL_ID 케이스 분기 디스패처로
 
 검증 증거: (AC1) decision-17 Context의 표에 8개 도구 각각의 조건 1/2 충족 여부와 decision-15 대비 변화를 기록했고, 근거 URL은 위 노트에 1차 출처(openai/codex#19937/#47003/#42025/#47779 및 각 도구 문서)로 남겼다. (AC2) Codex CLI의 변화(조건 1 충족)와 보류 이유(조건 2의 과소계상 + 스키마 불안정)를 decision-17 Decision 절에 명시했다. (AC3) decision-17 Consequences에 재검토 트리거 4개를 구체적으로 남겼다(#47003 수정 안정 릴리스 / rollout usage 스키마 문서화 / Gemini CLI의 셸 서브프로세스 세션 ID 주입 / 그 외 도구의 신규 채널). (AC4) git status로 이 브랜치의 변경이 backlog/ 3개 파일뿐이고 hooks/ 변경이 0건임을 확인했다. (AC5) ls로 실제 decision 파일이 17개임을 확인하고, doc-8의 '17개 decision 전부 계정' 목록에 decision-16·17이 포함되며 서론의 '17개 decision 중 7개 주제' 및 '대체 체인이 있는 7개 주제' 표제와 개수가 일치함을 grep으로 확인했다. ruff check . 통과.
 <!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-10-12 10:02
+---
+보관: 토큰 측정은 별도 컴포넌트로 이관(GF-146). coding-agent-git-commit-tool은 커밋 포맷만 맞춘다(decision-31).
+---
+<!-- COMMENTS:END -->
 
 ## Final Summary
 
