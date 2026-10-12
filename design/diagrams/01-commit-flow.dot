@@ -1,5 +1,6 @@
 // 커밋 한 번의 훅 생애주기 (3.01). 색은 센티넬 hex — build-diagrams.py가 CSS 변수로 치환한다.
 //   훅 = accent, 거부 = review(보라), 기록 = verify(초록), git 자체 단계 = surface-2
+// 훅은 prepare-commit-msg 하나다. 토큰 · 툴콜 측정은 범위 밖이다(decision-31).
 digraph commit_flow {
   bgcolor="transparent"; rankdir=TB; nodesep=0.35; ranksep=0.32;
   node [shape=box, style="filled,rounded", fillcolor="#f00004", color="#f00003",
@@ -7,42 +8,35 @@ digraph commit_flow {
   edge [color="#f00006", fontcolor="#f00002", fontname="Helvetica", fontsize=9,
         arrowsize=0.7, penwidth=1.2];
 
-  start [label="git commit -m / -F\n(--no-verify 포함)", fillcolor="#f00005"];
+  start [label="git commit -m / -F\n(--no-verify여도 같다)", fillcolor="#f00005"];
 
-  pcm [label="prepare-commit-msg\n재생 · 병합 면제 → 에디터 경로 거부\n→ 검증 마커 기록",
-       fillcolor="#f00007", color="#f00006", fontcolor="#f00008"];
-  replay [label="재생 · 병합 커밋\n(MERGE_HEAD · CHERRY_PICK_HEAD ·\nREBASE_HEAD · REVERT_HEAD)\n아무것도 하지 않음", fillcolor="#f00005"];
+  exempt [label="prepare-commit-msg ①\n재생 · 병합 커밋인가",
+          fillcolor="#f00007", color="#f00006", fontcolor="#f00008"];
+  replay [label="재생 · 병합 커밋\n(MERGE_HEAD · CHERRY_PICK_HEAD ·\nREBASE_HEAD · REVERT_HEAD,\nsource=merge · squash)\n아무것도 하지 않음", fillcolor="#f00005"];
 
-  bypass [shape=diamond, style="filled", label="--no-verify?", fillcolor="#f00004", fontsize=10];
+  editor [label="prepare-commit-msg ②\n에디터 경로 거부\n(메시지 파일에 비주석 내용이 없음)",
+          fillcolor="#f00007", color="#f00006", fontcolor="#f00008"];
 
-  cm [label="commit-msg\n제목 형식 · 길이 · 빈 줄 · Fixes 해시\n· 브랜치 Task-Id · AI-Model 게이트",
-      fillcolor="#f00007", color="#f00006", fontcolor="#f00008"];
+  validate [label="prepare-commit-msg ③ 메시지 검증\n제목 형식 · 길이 · 빈 줄 · 본문 72자\n· Fixes 해시 · 브랜치 Task-Id · 모델 게이트",
+            fillcolor="#f00007", color="#f00006", fontcolor="#f00008"];
 
-  reject [label="커밋 거부 (exit 1)\n검증 마커 삭제", fillcolor="#f0000c", color="#f0000b"];
+  reject [label="커밋 거부 (exit 1)", fillcolor="#f0000c", color="#f0000b"];
 
-  create [label="커밋 객체 생성 (git)", fillcolor="#f00005"];
+  trailers [label="prepare-commit-msg ④ 트레일러 삽입\ngit interpret-trailers --in-place\n(Task-Id · AI-Agent · Co-Authored-By ·\nHooks-Commit · Signed-off-by)",
+            fillcolor="#f0000e", color="#f0000d"];
 
-  pc [label="post-commit\n마커 유무로 우회 판정 → 트레일러 계산\n(Task-Id · AI-* · Tokens-Used · Tool-Calls ·\nHooks-Commit · Signed-off-by · Verify-Bypassed)",
-      fillcolor="#f00007", color="#f00006", fontcolor="#f00008"];
+  create [label="커밋 객체 생성 (git)\n최종 메시지 그대로", fillcolor="#f00005"];
 
-  amend [label="git interpret-trailers\n→ git commit --amend --no-verify\n(_GITFORMAT_AMEND_GUARD=1)", fillcolor="#f0000e", color="#f0000d"];
+  start -> exempt;
+  exempt -> replay [label="예", style=dashed];
+  exempt -> editor [label="아니오"];
+  editor -> reject [label="에디터 경로"];
+  editor -> validate [label="-m / -F"];
+  validate -> reject [label="위반"];
+  validate -> trailers [label="통과"];
+  trailers -> create;
+  replay -> create [style=dashed];
 
-  done [label="최종 커밋\n(트레일러 포함)", fillcolor="#f0000e", color="#f0000d"];
-
-  start -> pcm;
-  pcm -> replay [label="재생 · 병합", style=dashed];
-  pcm -> reject [label="에디터 경로"];
-  pcm -> bypass [label="통과"];
-  bypass -> cm [label="아니오"];
-  bypass -> create [label="예 — commit-msg 건너뜀", style=dashed];
-  cm -> reject [label="위반"];
-  cm -> create [label="통과"];
-  create -> pc;
-  pc -> amend [label="붙일 트레일러 있음"];
-  amend -> done;
-  amend -> pcm [label="재진입 — 가드로 즉시 종료", style=dotted, constraint=false];
-  pc -> done [label="없음", style=dashed];
-
-  { rank=same; cm; replay; }
-  { rank=same; pc; reject; }
+  { rank=same; editor; replay; }
+  { rank=same; validate; reject; }
 }
