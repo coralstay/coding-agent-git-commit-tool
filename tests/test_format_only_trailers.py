@@ -155,6 +155,21 @@ class FormatOnlyTrailersTest(IsolatedRepoTestCase):
             self.head_message(), f"Signed-off-by: {SIGNED_OFF_BY}", 1
         )
 
+    def test_GF_146_2_B2_직접_쓴_측정_줄도_본문_72자_제한을_받는다(self):
+        """[GF-146#2/GF-146#B2] Tokens-Used/Tool-Calls가 등록 트레일러에서 빠졌으므로 72자를 넘는 직접 쓴 측정 줄은 평범한 본문 줄로 거부되고, 72자 이내면 그대로 통과한다"""
+        # 결정(GF-146): 이 도구는 측정 키를 더는 모른다. 등록 트레일러만 72자 예외를
+        # 받으므로(validate_length) 측정 줄은 다른 본문 줄과 똑같이 다룬다 — 측정 줄을
+        # 위해 예외를 남겨 두면 그게 곧 측정과의 결합이다.
+        long_line = "Tokens-Used: " + "in=1 " * 13 + "out=2"
+        self.assertGreater(len(long_line), 72)
+        result = self.commit(f"[feat] long tokens line\n\n{long_line}")
+        self.assertRejected(result)
+        self.assertIn("본문 줄이 72자를 넘습니다", result.output)
+
+        short_line = "Tokens-Used: in=123456 out=7890"
+        self.assertAccepted(self.commit(f"[feat] short tokens line\n\n{short_line}"))
+        self.assertTrailerCount(self.head_message(), short_line, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
