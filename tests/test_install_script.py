@@ -89,8 +89,9 @@ class InstallScriptTest(IsolatedRepoTestCase):
 
         self.assertEqual(first, second)
         self.assertEqual(HOOKS_DIR / "prepare-commit-msg", first)
-        self.assertTrue((TEMPLATE_DIR / "hooks" / "commit-msg").is_symlink())
         self.assertTrue((TEMPLATE_DIR / "hooks" / "post-commit").is_symlink())
+        # GF-127에서 삭제된 훅의 링크는 남지 않는다.
+        self.assertFalse((TEMPLATE_DIR / "hooks" / "commit-msg").is_symlink())
 
         # 실제 전역 git 설정이 아니라 가짜 HOME 쪽에 반영됐는지를 직접 확인한다.
         self.assertEqual(
@@ -113,7 +114,7 @@ class InstallScriptTest(IsolatedRepoTestCase):
         self.assertTrue(
             (root / "template" / "hooks" / "prepare-commit-msg").is_symlink()
         )
-        self.assertTrue((root / "template" / "hooks" / "commit-msg").is_symlink())
+        self.assertTrue((root / "template" / "hooks" / "post-commit").is_symlink())
 
         # hooks/에서 파일 하나를 지운다 (GF-86의 hooks/pre-push 삭제 상황 재현).
         (root / "hooks" / "prepare-commit-msg").unlink()
@@ -126,8 +127,8 @@ class InstallScriptTest(IsolatedRepoTestCase):
         self.assertFalse(stale.is_symlink())
 
         # 여전히 존재하는 훅의 심볼릭 링크는 그대로 유지된다.
-        self.assertTrue((root / "template" / "hooks" / "commit-msg").is_symlink())
         self.assertTrue((root / "template" / "hooks" / "post-commit").is_symlink())
+        self.assertTrue((root / "template" / "hooks" / "gitformat.conf").is_symlink())
 
     # ── 회귀: 테스트가 이 저장소 자신의 설정을 오염시키지 않는다 ─────
 

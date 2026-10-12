@@ -3,8 +3,9 @@
 # 삽입한다(decision-3). post-commit은 --no-verify를 쓰든 --amend를 하든 git이 항상
 # 실행을 보장하는 훅이라는 점을 이용한다.
 #
-# 판단 근거: prepare-commit-msg는 재생 커밋 면제나 에디터 경로 거부로 빠져나가지
-# 않으면 직전 마커를 지우고 조건 없이 새로 쓴다. 이 훅은 그 마커의 존재 여부만 보고,
+# 판단 근거: prepare-commit-msg는 재생 커밋 면제로 빠져나가지 않으면 직전 마커를
+# 지우고, 에디터 경로 거부와 메시지 검증을 통과하면 새로 쓴다(거부하면 커밋 자체가
+# 막혀 이 훅이 돌지 않는다). 이 훅은 그 마커의 존재 여부만 보고,
 # 확인 후에는 항상(존재하든 안 하든) 지운다 — 그래야 다음 커밋으로 스테일 마커가
 # 새지 않는다.
 #
@@ -119,7 +120,7 @@ except OSError:
     pass
 
 # 커밋 메시지 원문은 유효하지 않은 UTF-8 바이트를 포함할 수 있다(GF-80, 실제 CI에서
-# 재현). commit-msg는 메시지를 읽기만 하므로 errors="replace"로 충분하지만, 이 훅은
+# 재현). prepare-commit-msg는 메시지를 읽기만 하므로 errors="replace"로 충분하지만, 이 훅은
 # 읽은 메시지를 amend로 다시 써넣기 때문에 replace를 쓰면 깨진 바이트가 U+FFFD로
 # 치환돼 커밋 내용이 조용히 손상된다. surrogateescape는 디코드 불가 바이트를 대리
 # 문자로 보존했다가 인코드 시 원래 바이트로 정확히 되돌리므로, 예외 없이 바이트
@@ -207,10 +208,10 @@ def detect_verify_bypass():
         queue_trailer(TRAILER_VERIFY_BYPASSED, "true")
 
 
-# Task-Id(decision-4): commit-msg가 이미 브랜치명에 <prefix>-<번호> 패턴이 있는지
-# 검증했으므로(없으면 예외 브랜치가 아닌 한 커밋 자체가 거부됨), 여기서는 같은 패턴을
-# 다시 찾아 Task-Id 트레일러로 남기기만 한다. 여기서 계산하는 TASK_PREFIX/BRANCH
-# 블록은 commit-msg의 enforce_task_id_branch가 검증할 때 쓰는 블록과 동일하게
+# Task-Id(decision-4): prepare-commit-msg가 이미 브랜치명에 <prefix>-<번호> 패턴이
+# 있는지 검증했으므로(없으면 예외 브랜치가 아닌 한 커밋 자체가 거부됨), 여기서는 같은
+# 패턴을 다시 찾아 Task-Id 트레일러로 남기기만 한다. 여기서 계산하는 TASK_PREFIX/BRANCH
+# 블록은 prepare-commit-msg의 enforce_task_id_branch가 검증할 때 쓰는 블록과 동일하게
 # 유지한다(파일별 독립 중복).
 def trailer_task_id():
     task_prefix_default = conf_get("gitformat.taskPrefixDefault")
@@ -228,7 +229,7 @@ def trailer_task_id():
     )
     branch = branch_result.stdout.rstrip("\n") if branch_result.returncode == 0 else "HEAD"
 
-    # commit-msg와 동일하게 앵커링해서 부분 문자열 오매치를 피한다(GF-34).
+    # prepare-commit-msg와 동일하게 앵커링해서 부분 문자열 오매치를 피한다(GF-34).
     match = re.search(
         rf"(^|[^a-zA-Z0-9]){re.escape(task_prefix)}-([0-9]+)", branch, re.IGNORECASE
     )
@@ -301,7 +302,7 @@ def read_transcript_model(path):
 # AI-Model(decision-5): Claude Code는 세션 트랜스크립트
 # (~/.claude/projects/<slug>/<session>.jsonl)의 message.model 필드를 읽는다 —
 # 이는 Anthropic API 응답을 애플리케이션이 그대로 기록한 값이라 자가신고가
-# 아니다. 그 외 도구는 commit-msg 게이트가 이미 검증한 gitformat.aiModel을
+# 아니다. 그 외 도구는 prepare-commit-msg 게이트가 이미 검증한 gitformat.aiModel을
 # 쓴다. CLAUDE_CODE_SESSION_ID는 트랜스크립트 파일 경로를 찾는 데만 쓰고, 값
 # 자체를 커밋 footer에 남기지는 않는다(세션 식별자가 커밋 이력에 영구히 남는 걸
 # 피하기 위함, decision-5 amendment).

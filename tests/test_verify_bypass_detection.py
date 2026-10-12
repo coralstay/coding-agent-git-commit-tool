@@ -20,9 +20,10 @@ post-commit은 그 경로에서 Verify-Bypassed를 여전히 큐에 넣는데, �
 실패해(archive DRAFT-18) 트레일러가 커밋에 남지 않는다 — 그 경로를 단언으로 고정하지
 않는 것은 지금 동작이 의도된 설계가 아니라 구 post-commit의 미해결 결함이기 때문이다.
 
-이 시점의 한계도 기록해 둔다: --no-verify는 아직 commit-msg를 건너뛰므로 '메시지 검증
-우회'는 여전히 가능하고, 그것을 기록하는 신호는 없다. 검증을 prepare-commit-msg로 옮기는
-GF-127이 그 한 태스크짜리 과도기를 닫는다.
+GF-126 시점에는 --no-verify가 아직 commit-msg를 건너뛰어 '메시지 검증 우회'가 기록 없이
+가능했다. GF-127이 검증을 prepare-commit-msg로 옮기고 commit-msg를 삭제해 그 과도기를
+닫았다 — --no-verify로 형식이 틀린 메시지를 넣을 수 없다는 사실은
+test_message_format_enforced.py가 고정한다.
 """
 
 import unittest

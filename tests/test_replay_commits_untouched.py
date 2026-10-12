@@ -7,9 +7,9 @@ DRAFT-18)를 원인 단계에서 없애는 장치이므로, 재생 경로에서 
 
 **남은 구 훅은 사본에서 지운 뒤 검증한다.** 구 post-commit이 cherry-pick 중에 내는
 DRAFT-18 트레이스백이 아직 그대로 살아 있어, 그걸 같이 태우면 이 파일이 새 훅을 검증하는
-게 아니라 아직 고치지 않은 구 훅을 검증하게 된다. GF-126에서 pre-commit이 삭제돼 지울
-대상이 2개로 줄었고, commit-msg/post-commit도 삭제되는 GF-127~128 이후에는 이 사본
-구성이 곧 실제 구성이 된다.
+게 아니라 아직 고치지 않은 구 훅을 검증하게 된다. GF-126에서 pre-commit이, GF-127에서
+commit-msg가 삭제돼 지울 대상은 post-commit 하나만 남았고, post-commit도 삭제되는
+GF-128 이후에는 이 사본 구성이 곧 실제 구성이 된다.
 
 source 값과 진행 상태 파일은 git 2.54.0에서 실측했다(2026-09-26). cherry-pick과
 rebase 재생은 `source=message`라 CHERRY_PICK_HEAD 같은 진행 상태 파일로만 잡히고,
@@ -26,7 +26,7 @@ PROGRESS_FILES = ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REBASE_HEAD", "REVERT_HEAD"
 
 class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
     def setUp(self):
-        self.hooks_copy = self.copy_hooks("commit-msg", "post-commit")
+        self.hooks_copy = self.copy_hooks("post-commit")
         self.repo = self.make_repo(hooks_path=self.hooks_copy)
         self.hook = self.hooks_copy / "prepare-commit-msg"
         self.write("base.txt", "base\n")
@@ -66,7 +66,9 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
     def test_cherry_pick이_거부되지_않는다(self):
         """[GF-125] cherry-pick 재생 커밋은 훅의 거부나 트레이스백 없이 완료된다"""
         base_branch = self.current_branch()
-        self.git_ok("checkout", "-q", "-b", "side")
+        # GF-127 이후 메시지 검증(브랜치 Task-Id 강제 포함)이 prepare-commit-msg에서
+        # 돌므로, 준비 단계의 일반 커밋도 Task-Id가 있는 브랜치에서 만들어야 한다.
+        self.git_ok("checkout", "-q", "-b", "GF-1-side")
         self.write("a.txt", "hi\n")
         self.git_ok("add", "a.txt")
         self.commit_ok("[feat] 재생할 커밋")
@@ -83,8 +85,9 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
         self.assertHookSilent(self.git("revert", "--no-edit", "HEAD"))
 
         self.assertEqual(2, self.commit_count())
-        # git이 만드는 기본 메시지는 [type][subsystem] 형식이 아니다 — 재생·병합
-        # 커밋을 면제하는 이유 자체가 이것이다.
+        # 충돌 없는 revert는 REVERT_HEAD가 없어 면제에 걸리지 않는다(source=message).
+        # git이 만드는 이 제목은 [type][subsystem] 형식이 아니지만 GF-127에서 형식
+        # 규칙의 예외로 인정했으므로 검증을 거치고도 조용히 통과한다.
         self.assertEqual('Revert "[feat] 기준 커밋"', self.head_subject())
 
     def test_에디터로_여는_revert도_거부되지_않는다(self):
@@ -102,7 +105,7 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
     def test_병합_커밋이_거부되지_않는다(self):
         """[GF-125] 병합 커밋(source=merge, MERGE_HEAD 존재)은 거부되지 않는다"""
         base_branch = self.current_branch()
-        self.git_ok("checkout", "-q", "-b", "feature")
+        self.git_ok("checkout", "-q", "-b", "GF-2-feature")
         self.write("feature.txt", "feature\n")
         self.git_ok("add", "feature.txt")
         self.commit_ok("[feat] 병합될 커밋")
@@ -112,7 +115,7 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
         self.git_ok("add", "main.txt")
         self.commit_ok("[feat] 병합하는 쪽 커밋")
 
-        self.assertHookSilent(self.git("merge", "--no-ff", "--no-edit", "feature"))
+        self.assertHookSilent(self.git("merge", "--no-ff", "--no-edit", "GF-2-feature"))
 
         # 부모가 2개인지까지 봐야 진짜 병합 커밋이 만들어진 것이 증명된다.
         parents = self.git_ok("log", "-1", "--format=%p").stdout.split()
