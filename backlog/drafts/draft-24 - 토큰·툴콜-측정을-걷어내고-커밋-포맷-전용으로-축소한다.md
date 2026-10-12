@@ -1,0 +1,78 @@
+---
+id: DRAFT-24
+title: 토큰·툴콜 측정을 걷어내고 커밋 포맷 전용으로 축소한다
+status: Draft
+assignee: []
+created_date: '2026-10-12 09:35'
+updated_date: '2026-10-12 09:35'
+labels:
+  - hooks
+  - docs
+dependencies: []
+priority: high
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+유저 결정(2026-10-12): coding-agent-git-commit-tool은 깃 커밋 포맷만 맞춘다. 토큰 측정을 커밋 훅에 두면 깃과 측정이 강결합되므로, 측정은 별도 컴포넌트(이름 미정)로 분리한다. 이 저장소에서는 측정 로직을 모두 걷어내고 문서를 포맷 전용으로 맞춘다. 상위 저장소(coralstay-software-factory)의 README는 이미 '포맷 레이어'로 고쳤다(9d6980f, 브랜치 docs/commit-tool-format-only).
+
+걷어낼 것:
+- hooks/prepare-commit-msg: ATTRIBUTED_RECORD · LEGACY_CURSOR, INPUT/OUTPUT usage 필드, read_transcript_entries · group_responses · commit_target_paths · AttributionMatcher · attributed_record_load/save · measure_claude_code_token_usage · trailer_token_values, insert_trailers()의 Tokens-Used/Tool-Calls 분기와 귀속 기록 저장
+- hooks/gitformat.conf: gitformat.trailer.tokensUsed · toolCalls
+- tests: test_token_usage_measurement.py 삭제, test_trailer_ai_attribution.py 등 다른 테스트의 Tokens-Used/Tool-Calls 단언
+- 문서: README.md(필드 표 · 예시 · 소개 문구), hooks/readme.md, design/(1~4장 · diagrams/01-commit-flow.dot), backlog doc-3 · doc-6 · doc-16 · doc-14 · doc-21 · doc-22
+
+범위 밖(유지):
+- AI-Agent 트레일러의 모델 판정(트랜스크립트의 message.model 읽기)은 출처 기록이라 남긴다. claude_transcript_path() · read_transcript_model()은 그대로 둔다.
+- 과거 decision(5 · 19 · 27)과 완료 태스크는 이력이므로 고치지 않고, 새 decision으로 대체를 기록한다.
+
+## 비즈니스 규칙
+- B1 (AC #1) AI 도구가 감지돼도 Tokens-Used · Tool-Calls 트레일러를 붙이지 않는다
+- B2 (AC #1) 사람이나 에이전트가 메시지에 직접 쓴 Tokens-Used · Tool-Calls 줄은 지우지도 검증하지도 않고 그대로 둔다
+- B3 (AC #1) 훅은 .git/.gitformat-token-attributed · .gitformat-token-cursor를 만들거나 읽지 않는다
+- B4 (AC #2) AI-Agent · Co-Authored-By · Task-Id · Hooks-Commit · Signed-off-by 삽입 동작은 바뀌지 않는다
+<!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 prepare-commit-msg에서 토큰·툴콜 측정 코드와 귀속 기록 파일 처리를 삭제한다(B1 · B2 · B3)
+- [ ] #2 gitformat.conf에서 tokensUsed · toolCalls 키를 지우고, 남은 트레일러 삽입이 그대로 동작함을 테스트로 확인한다(B4)
+- [ ] #3 측정 전용 테스트를 지우고 다른 테스트의 Tokens-Used · Tool-Calls 단언을 정리한다
+- [ ] #4 새 decision을 만들어 '커밋 포맷 전용, 토큰 측정은 별도 컴포넌트'를 기록하고 decision-5 · 19 · 27의 측정 조항을 대체한다고 적는다
+- [ ] #5 README.md · hooks/readme.md를 실제 동작에 맞춘다 — 소개 문구에서 측정을 빼고, 필드 표의 post-commit · AI-Tool · Verify-Bypassed 등 낡은 항목도 함께 고친다
+- [ ] #6 design/(제안서~구현 계획서 · 01-commit-flow.dot)과 backlog doc(3 · 6 · 14 · 16 · 21 · 22)에서 측정을 범위 밖으로 고치고, doc-16에는 폐기 사유와 새 decision 링크를 적는다
+- [ ] #7 마일스톤 m-2(AI 커밋 토큰 측정) · DRAFT-23 · GF-114를 아카이브하고 새 컴포넌트로 옮긴다는 사유를 남긴다
+<!-- AC:END -->
+
+## Definition of Done
+<!-- DOD:BEGIN -->
+- [ ] #1 python3 -m unittest discover tests 전체 통과 로그
+- [ ] #2 grep -rE 'Tokens-Used|Tool-Calls|tokensUsed|toolCalls' hooks README.md design 결과가 '측정은 범위 밖' 안내 문구뿐이다
+- [ ] #3 design/ 상대 링크와 build-diagrams.py 렌더 결과에 깨진 곳이 없다
+<!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+### Subjective
+유저는 coding-agent-git-commit-tool이 깃 포맷만 맞추길 원한다. 토큰 측정을 깃 훅에 두는 것은 강결합이므로 별도 컴포넌트로 뺀다고 결정했다(2026-10-12).
+
+### Objective
+- prepare-commit-msg 약 500~1160행에 측정 코드가 있다(측정 함수 · AttributionMatcher · 귀속 기록 파일).
+- gitformat.conf에 trailer.tokensUsed · toolCalls가 있다.
+- tests/test_token_usage_measurement.py(556줄)가 측정 전용이고, test_trailer_ai_attribution.py 등에 Tokens-Used 단언이 있다.
+- README 필드 표는 post-commit · AI-Tool · Verify-Bypassed를 적고 있어, 측정과 별개로 이미 실제 동작과 어긋나 있다.
+
+### Assessment
+AI-Agent의 모델 판정이 트랜스크립트 경로 함수를 함께 쓰므로, 그 두 함수는 남기고 측정 전용 코드만 지운다. 삭제 작업이라 AC마다 '붙지 않는다'는 단언 테스트를 먼저 쓴다(Red). 문서는 코드 다음에 고친다.
+
+### Plan
+1. 테스트 먼저: B1~B4 단언을 추가하고 기존 측정 단언을 뒤집는다(Red).
+2. prepare-commit-msg와 gitformat.conf에서 측정 코드를 삭제한다(Green). 커밋.
+3. 측정 전용 테스트를 삭제한다. 커밋.
+4. 새 decision을 만든다. 커밋.
+5. README · hooks/readme.md를 고친다. 커밋.
+6. design/와 backlog doc을 고치고 다이어그램을 다시 렌더한다. 커밋.
+7. m-2 · DRAFT-23 · GF-114를 아카이브한다. 커밋.
+<!-- SECTION:PLAN:END -->
