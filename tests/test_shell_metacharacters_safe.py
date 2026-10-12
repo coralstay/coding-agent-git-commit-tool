@@ -88,8 +88,8 @@ class ShellMetacharactersSafeTest(IsolatedRepoTestCase):
 
     def test_매우_긴_라인이_섞여도_트레일러_삽입이_깨지지_않는다(self):
         """[커밋메시지] 매우 긴 라인이 섞여도 트레일러 삽입이 깨지지 않는다"""
-        # 이 테스트의 목적은 post-commit의 interpret-trailers 삽입이 매우 긴 라인
-        # 앞에서 깨지지 않는지 확인하는 것이지, GF-83의 본문 줄 길이(72자) 검증
+        # 이 테스트의 목적은 interpret-trailers 삽입(GF-128부터
+        # prepare-commit-msg)이 매우 긴 라인 앞에서 깨지지 않는지 확인하는 것이지, GF-83의 본문 줄 길이(72자) 검증
         # 자체를 테스트하는 게 아니다. 예전에는 20000자 본문 줄을 --no-verify로
         # commit-msg를 건너뛰어 통과시켰지만, GF-127에서 검증이 --no-verify로도
         # 건너뛸 수 없는 prepare-commit-msg로 옮겨와 그 우회가 닫혔다. 그래서 72자
