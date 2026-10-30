@@ -73,3 +73,13 @@ jobs:
       # 평범한 import로 쓴다.
       - name: Run tests
         run: python3 -m unittest discover -s tests -v
+      # 같은 스위트를 대상 저장소의 .githooks 경로로 한 번 더 돌린다(GF-148,
+      # decision-32): 기본 훅 연결이 githooks/ 사본(디스패처 + 10-commit-format
+      # 플러그인)으로 바뀌고, 플러그인이 PATH의 git-commit-tool을 부른다. 그 이름은
+      # 이 체크아웃의 install.sh여야 한다 - isolated_repo가 import 시점에 확인한다.
+      - name: Run tests via .githooks plugin path
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          ln -sf "$PWD/install.sh" "$RUNNER_TEMP/bin/git-commit-tool"
+          PATH="$RUNNER_TEMP/bin:$PATH" GITFORMAT_TEST_VIA_GITHOOKS=1 \
+            python3 -m unittest discover -s tests -v

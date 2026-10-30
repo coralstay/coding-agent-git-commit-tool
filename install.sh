@@ -43,6 +43,30 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
+# `hook <이름> [인자...]`: 대상 저장소 .githooks/의 플러그인이 부르는 진입점
+# (GF-148, decision-32). prepare-commit-msg.d/10-commit-format이 한 줄로
+# `exec git-commit-tool hook prepare-commit-msg "$@"`를 부르면 여기서 이 클론의
+# hooks/prepare-commit-msg를 절대경로로 exec한다. 훅은 realpath(__file__)로 자기
+# 위치를 찾으므로 gitformat.conf와 Hooks-Commit(이 클론의 HEAD)이 옛 설치와 똑같이
+# 이 클론 기준으로 해석된다. 훅 로직은 바꾸지 않는다.
+#
+# 위의 conf·python3 가드보다 뒤에 둔다 — python3가 없으면 여기서 exit 1로 커밋을
+# 막는다. 가드보다 앞에서 exec하면 env가 127을 내고, 디스패처는 127을 "명령 없음"으로
+# 보고 검사를 건너뛰므로 python3 부재가 조용한 통과로 바뀐다.
+if [ "${1:-}" = "hook" ]; then
+  shift
+  case "${1:-}" in
+    prepare-commit-msg)
+      shift
+      exec "${HOOKS_DIR}/prepare-commit-msg" "$@"
+      ;;
+    *)
+      echo "git-commit-tool hook: 지원하지 않는 훅입니다: ${1:-(없음)} (지원: prepare-commit-msg)" >&2
+      exit 1
+      ;;
+  esac
+fi
+
 GLOBAL_MODE="ask"
 TARGET=""
 for arg in "$@"; do
