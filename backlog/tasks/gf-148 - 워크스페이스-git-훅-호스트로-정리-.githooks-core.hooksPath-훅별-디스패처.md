@@ -1,7 +1,7 @@
 ---
-id: DRAFT-22
+id: GF-148
 title: '워크스페이스 git 훅 호스트로 정리: .githooks + core.hooksPath + 훅별 디스패처'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-30T19:04:00Z'
 updated_date: '2026-10-30T19:35:00Z'
@@ -9,6 +9,8 @@ labels:
   - hooks
   - workspace
 dependencies: []
+documentation:
+  - /Users/flynn_macpro/.claude/plans/giggly-kindling-snowglobe.md
 ---
 
 ## Description
