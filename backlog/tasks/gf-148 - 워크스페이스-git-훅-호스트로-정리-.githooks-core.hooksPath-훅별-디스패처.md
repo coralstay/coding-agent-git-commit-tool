@@ -1,10 +1,10 @@
 ---
 id: GF-148
 title: '워크스페이스 git 훅 호스트로 정리: .githooks + core.hooksPath + 훅별 디스패처'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-30T19:04:00Z'
-updated_date: '2026-10-30T19:35:00Z'
+updated_date: '2026-10-30T19:36:00Z'
 labels:
   - hooks
   - workspace
