@@ -8,7 +8,16 @@
 # target-repo-dir을 생략하면 현재 디렉터리를 대상으로 한다.
 set -eu
 
-SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+_SRC="$0"
+while [ -h "$_SRC" ]; do
+  _DIR="$(cd -P "$(dirname "$_SRC")" && pwd)"
+  _SRC="$(readlink "$_SRC")"
+  case "$_SRC" in
+    /*) ;;
+    *) _SRC="$_DIR/$_SRC" ;;
+  esac
+done
+SELF_DIR="$(cd -P "$(dirname "$_SRC")" && pwd)"
 readonly SELF_DIR
 HOOKS_DIR="${SELF_DIR}/hooks"
 readonly HOOKS_DIR
@@ -38,6 +47,14 @@ GLOBAL_MODE="ask"
 TARGET=""
 for arg in "$@"; do
   case "$arg" in
+    -h|--help|help)
+      echo "사용법 (Usage): git-commit-tool [--global|--no-global] [target-repo-dir]"
+      echo "  지정한 git 저장소(생략 시 현재 디렉터리)에 core.hooksPath 및 commit.template을 설정합니다."
+      echo "  --global     전역 git templateDir 설정도 함께 적용"
+      echo "  --no-global  전역 설정 프롬프트 생략"
+      echo "  -h, --help   이 도움말 출력"
+      exit 0
+      ;;
     --global) GLOBAL_MODE="yes" ;;
     --no-global) GLOBAL_MODE="no" ;;
     -*) echo "install.sh: 알 수 없는 옵션: $arg" >&2; exit 1 ;;
