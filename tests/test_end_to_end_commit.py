@@ -6,7 +6,7 @@
 
 import unittest
 
-from isolated_repo import GITFORMAT_ROOT, INSTALL_SH, IsolatedRepoTestCase
+from isolated_repo import GITFORMAT_ROOT, IsolatedRepoTestCase
 
 
 class EndToEndCommitTest(IsolatedRepoTestCase):
@@ -40,53 +40,32 @@ class EndToEndCommitTest(IsolatedRepoTestCase):
         self.assertEqual(1, self.commit_count())
         self.assertNotIn("ruff", result.output)
 
-    def test_template_심볼릭_링크_설치에서도_훅이_자기_설정을_찾는다(self):
-        """[GF-16 회귀] template/ 심볼릭 링크로 설치된 저장소에서도 훅이 자기 위치를 찾는다
+    def test_심볼릭_링크로_연결된_훅도_자기_설정을_찾는다(self):
+        """[GF-16 회귀] .git/hooks/의 심볼릭 링크로 연결된 훅도 자기 위치를 찾는다
 
         훅은 .git/hooks/에 놓인 심볼릭 링크가 아니라 링크가 가리키는 실제 위치를
         기준으로 gitformat.conf를 찾아야 한다(GF-16) — realpath가 그 일을 한다.
-        realpath가 빠지면 conf를 못 찾아 각 훅 앞부분의 읽기 가드가 커밋을 거부한다.
+        realpath가 빠지면 conf를 못 찾아 훅 앞부분의 읽기 가드가 커밋을 거부한다.
 
-        이 회귀는 GF-135까지 test_lint_dispatch.py가 "심볼릭 링크 설치에서도 checks/를
-        찾는다"로 고정하고 있었다. checks/가 삭제됐어도 realpath가 필요한 이유(conf)는
-        그대로 남으므로, 단언을 conf 기준으로 바꿔 이 파일로 옮겨왔다.
+        이 링크를 심던 install.sh --global(init.templateDir)은 GF-148(decision-32)에서
+        없앴다. 그래도 예전에 전역 templateDir을 설정한 머신에서는 새 저장소마다 같은
+        링크가 계속 심어지고 훅도 그대로 돌므로, 링크를 직접 만들어 회귀를 고정한다.
         """
-        # 이 테스트만 HOME을 가짜 디렉터리로 바꾼다. 러너의 HOME은 그대로이므로
-        # asdf 버전 해석(isolated_repo.asdf_pins)은 영향을 받지 않는다.
-        fake_home = self.fake_home()
-        env = {"HOME": str(fake_home)}
-
-        # --global은 전역 설정만 하는 플래그가 아니다 — install.sh는 타깃(기본값
-        # CWD)에 대한 로컬 설치도 함께 수행하므로 격리된 타깃을 명시한다(GF-123).
-        self.run_cmd_ok([INSTALL_SH, "--global", self.repo], env=env)
-
         new_repo = self.temp_dir()
-        self.make_repo(path=new_repo, hooks_path=None, env=env)
-
-        # init.templateDir이 .git/hooks/*를 coding-agent-git-commit-tool 클론을 가리키는 심볼릭 링크로
-        # 채웠는지부터 확인한다 — 이게 아니면 GF-16 시나리오 자체가 재현 안 된다.
+        self.make_repo(path=new_repo, hooks_path=None)
         linked_hook = new_repo / ".git" / "hooks" / "prepare-commit-msg"
-        self.assertTrue(
-            linked_hook.is_symlink(), f"{linked_hook}가 심볼릭 링크가 아니다"
-        )
-        self.assertEqual(
-            str(GITFORMAT_ROOT / "hooks" / "prepare-commit-msg"),
-            str(linked_hook.readlink()),
-        )
+        linked_hook.symlink_to(GITFORMAT_ROOT / "hooks" / "prepare-commit-msg")
 
         self.write("a.txt", "hi\n", cwd=new_repo)
-        self.git_ok("add", "a.txt", cwd=new_repo, env=env)
-        result = self.commit("[feat] via symlinked hooks", cwd=new_repo, env=env)
+        self.git_ok("add", "a.txt", cwd=new_repo)
+        result = self.commit("[feat] via symlinked hooks", cwd=new_repo)
 
         self.assertAccepted(result)
         # conf를 못 찾았다면 읽기 가드가 이 메시지를 내고 커밋을 막았을 것이다.
         self.assertNotIn("gitformat.conf를 읽을 수 없습니다", result.output)
         # conf에서 읽은 트레일러 키가 실제로 붙었는지까지 본다 — 종료 코드만 보면
         # 훅이 아예 실행되지 않은 경우에도 똑같이 통과한다.
-        self.assertTrailerCount(
-            self.head_message(cwd=new_repo, env=env), "Hooks-Commit:", 1
-        )
-
+        self.assertTrailerCount(self.head_message(cwd=new_repo), "Hooks-Commit:", 1)
 
 if __name__ == "__main__":
     unittest.main()
