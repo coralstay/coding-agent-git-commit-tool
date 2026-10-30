@@ -27,6 +27,8 @@ HOOKS_DIR = GITFORMAT_ROOT / "hooks"
 CONF_FILE = HOOKS_DIR / "gitformat.conf"
 INSTALL_SH = GITFORMAT_ROOT / "install.sh"
 GITMESSAGE = GITFORMAT_ROOT / ".gitmessage"
+# 대상 저장소의 .githooks/로 복사되는 원본(GF-148, decision-32).
+GITHOOKS_TEMPLATE = GITFORMAT_ROOT / "githooks"
 
 USER_NAME = "gitformat-tests"
 USER_EMAIL = "tests@example.com"

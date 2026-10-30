@@ -1,0 +1,53 @@
+#!/bin/sh
+# coding-agent-git-commit-tool 공용 훅 디스패처(GF-148, decision-32).
+#
+# 대상 저장소의 .githooks/에 커밋되고 core.hooksPath=.githooks로 연결된다.
+# core.hooksPath는 디렉터리 하나만 가리키므로 훅마다 이 디스패처를 두고, 실제 일은
+# <훅 이름>.d/ 안의 플러그인에 맡긴다. pre-commit과 prepare-commit-msg는 바이트까지
+# 같은 파일이다 — 자기 파일 이름($0)으로 어느 .d를 돌릴지 정한다.
+#
+# 규칙:
+#   - <훅 이름>.d/*를 이름순(셸 glob 순서)으로 실행한다. 순서를 정하려면 10-, 20-처럼
+#     숫자 접두사를 붙인다. 점으로 시작하는 파일은 glob에 잡히지 않아 실행되지 않는다.
+#   - 훅 인자("$@")를 그대로 넘긴다 — prepare-commit-msg는 메시지 파일 경로 등을 받는다.
+#   - 플러그인이 0이 아닌 코드로 끝나면 뒤 플러그인은 실행하지 않고 그 코드로 끝난다.
+#   - 종료 코드 127은 "명령을 찾을 수 없다"(sh의 exec 실패)로 보고, 경고만 내고
+#     다음 플러그인으로 간다. 플러그인은 한 줄로 PATH의 명령을 exec하므로, 그 명령이
+#     없는 머신(다른 사람의 클론 등)에서 커밋이 막히지 않게 하기 위해서다. 강제는
+#     CI가 맡는다.
+#   - 실행 권한이 없는 파일은 경고 후 건너뛴다. 조용히 넘기면 +x가 빠진 체크아웃에서
+#     검사가 사라진 걸 아무도 모른다.
+#   - stdin은 나눠 주지 않는다. stdin을 읽는 훅(pre-push 등)에 플러그인을 여럿 두면
+#     첫 플러그인이 다 읽어 버린다 — 지금 쓰는 두 훅은 stdin이 없다.
+#
+# 플러그인 이름과 실제 로직은 이 파일과 무관하다. 로직은 각 도구의 명령에 있다.
+set -u
+
+HOOK_NAME="${0##*/}"
+readonly HOOK_NAME
+HOOK_HOME="$(dirname "$0")"
+readonly HOOK_HOME
+PLUGIN_DIR="${HOOK_HOME}/${HOOK_NAME}.d"
+readonly PLUGIN_DIR
+
+[ -d "$PLUGIN_DIR" ] || exit 0
+
+for plugin in "$PLUGIN_DIR"/*; do
+  # 디렉터리가 비어 있으면 glob이 펼쳐지지 않고 패턴 문자열 그대로 남는다.
+  [ -e "$plugin" ] || continue
+  name="${HOOK_NAME}.d/${plugin##*/}"
+  if [ ! -f "$plugin" ] || [ ! -x "$plugin" ]; then
+    echo "githooks: ${name}: 실행할 수 있는 파일이 아니라 건너뜁니다 (chmod +x로 켭니다)" >&2
+    continue
+  fi
+  status=0
+  "$plugin" "$@" || status=$?
+  if [ "$status" -eq 127 ]; then
+    echo "githooks: ${name}: 부르는 명령을 PATH에서 찾지 못해 건너뜁니다 (강제는 CI가 맡습니다)" >&2
+    continue
+  fi
+  if [ "$status" -ne 0 ]; then
+    exit "$status"
+  fi
+done
+exit 0

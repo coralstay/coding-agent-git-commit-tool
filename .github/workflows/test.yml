@@ -26,9 +26,10 @@ jobs:
       # 참고하고 문법은 POSIX만 유지하기로 함). 이 스텝을 지우거나 `-s bash`로
       # 바꾸면 그 정책이 깨진다. hooks/는 GF-108~GF-111에서 전부 Python으로 포팅돼
       # (decision-16) 대상에서 빠졌고 아래 ruff 스텝이 대신 맡는다 - install.sh만
-      # decision-9의 적용을 그대로 받는다.
+      # decision-9의 적용을 그대로 받는다. githooks/의 디스패처도 대상 저장소에서
+      # sh로 도는 POSIX 스크립트라 같은 게이트를 받는다(GF-148, decision-32).
       - name: ShellCheck (POSIX 준수 게이트, decision-9)
-        run: shellcheck -s sh install.sh
+        run: shellcheck -s sh install.sh githooks/pre-commit githooks/prepare-commit-msg
       # 이 job은 checkout 외에 아무것도 설치하지 않는다(테스트 job과 별개다).
       - name: Install ruff
         run: pip install --quiet ruff
