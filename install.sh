@@ -8,6 +8,7 @@
 #
 # 사용법:
 #   git-commit-tool [install] [target-repo-dir]   .githooks 설치(기본 동작)
+#   git-commit-tool migrate [target-repo-dir]     옛 설치(hooksPath=클론의 hooks/)를 .githooks로
 #   git-commit-tool hook <훅 이름> [훅 인자...]    .githooks 플러그인이 부르는 진입점
 # target-repo-dir을 생략하면 현재 디렉터리를 대상으로 한다.
 set -eu
@@ -73,9 +74,11 @@ fi
 
 usage() {
   echo "사용법 (Usage): git-commit-tool [install] [target-repo-dir]"
+  echo "                git-commit-tool migrate [target-repo-dir]"
   echo "                git-commit-tool hook prepare-commit-msg <훅 인자...>"
   echo "  install  지정한 git 저장소(생략 시 현재 디렉터리)에 .githooks/(디스패처 +"
   echo "           기본 플러그인)를 만들고 core.hooksPath=.githooks, commit.template을 설정"
+  echo "  migrate  core.hooksPath가 이 도구의 hooks/를 가리키는 옛 설치를 .githooks로 옮김"
   echo "  hook     .githooks 플러그인이 부르는 진입점 - 직접 쓸 일은 없습니다"
   echo "  -h, --help   이 도움말 출력"
 }
@@ -83,6 +86,7 @@ usage() {
 COMMAND="install"
 case "${1:-}" in
   install) shift ;;
+  migrate) COMMAND="migrate"; shift ;;
 esac
 
 TARGET=""
@@ -223,6 +227,29 @@ case "$COMMAND" in
       fi
     fi
     finish_install
+    ;;
+  # 옛 설치(decision-2)는 core.hooksPath가 클론의 hooks/를 직접 가리킨다. 그 상태에서는
+  # .git/hooks/가 이미 무시되고 있으므로 install과 달리 그 훅들 때문에 멈추지 않는다 -
+  # hooksPath를 .githooks로 바꿔도 무시되는 건 그대로다. 목록만 알린다.
+  migrate)
+    if [ "$HOOKS_PATH" = ".githooks" ]; then
+      echo "coding-agent-git-commit-tool: ${TARGET}는 이미 .githooks를 씁니다. 빠진 파일만 채웁니다."
+      install_githooks
+      exit 0
+    fi
+    if [ -z "$HOOKS_PATH" ] || ! is_tool_hooks_dir "$HOOKS_PATH"; then
+      echo "install.sh: ${TARGET}는 옛 방식 설치(core.hooksPath=이 도구의 hooks/)가 아닙니다: ${HOOKS_PATH:-(설정 없음)}" >&2
+      echo "  새로 설치하려면 git-commit-tool install ${TARGET}를 쓰세요." >&2
+      exit 1
+    fi
+    echo "coding-agent-git-commit-tool: 옛 설치에서 옮깁니다 (core.hooksPath=${HOOKS_PATH} -> .githooks)"
+    finish_install
+    UNMANAGED="$(unmanaged_git_hooks)"
+    if [ -n "$UNMANAGED" ]; then
+      echo "  참고: .git/hooks/의 다음 훅은 예전처럼 계속 실행되지 않습니다. 필요하면"
+      echo "        .githooks/<훅>.d/ 플러그인으로 옮기세요:"
+      printf '%s\n' "$UNMANAGED" | sed 's/^/        /'
+    fi
     ;;
 esac
 
