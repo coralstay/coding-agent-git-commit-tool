@@ -4,7 +4,7 @@ title: '워크스페이스 git 훅 호스트로 정리: .githooks + core.hooksPa
 status: Draft
 assignee: []
 created_date: '2026-10-30T19:04:00Z'
-updated_date: '2026-10-30T19:32:00Z'
+updated_date: '2026-10-30T19:35:00Z'
 labels:
   - hooks
   - workspace
@@ -45,6 +45,13 @@ core.hooksPath는 저장소당 디렉터리 하나만 가리키므로, 지금처
 - [ ] #5 hooksPath가 클론 경로인 기존 설치 저장소를 .githooks로 옮기는 migrate 명령이 있다
 - [ ] #6 README·hooks/readme.md를 갱신하고, templateDir(decision-2)을 어떻게 바꾸는지 decision 기록을 남긴다
 <!-- AC:END -->
+
+## Definition of Done
+<!-- DOD:BEGIN -->
+- [ ] #1 tests/ 전체 통과(기존 + 디스패처·install·migrate 신규), 로그를 Implementation Notes에 첨부
+- [ ] #2 임시 저장소에서 install → 커밋 형식 검사와 source-header 검사가 둘 다 실제로 동작함을 실측
+- [ ] #3 README·hooks/readme.md·decision 갱신
+<!-- DOD:END -->
 
 ## Implementation Plan
 
