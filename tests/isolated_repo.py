@@ -217,8 +217,9 @@ class IsolatedRepoTestCase(unittest.TestCase):
         shutil.copytree(GITHOOKS_TEMPLATE, copy, dirs_exist_ok=True)
         return copy
 
-    def path_with_tools(self, **tools):
-        """`이름=실제 경로` 심볼릭 링크를 담은 디렉터리를 러너의 PATH 앞에 붙인 값.
+    def path_with_tools(self, base=None, /, **tools):
+        """`이름=실제 경로` 심볼릭 링크를 담은 디렉터리를 PATH(`base`, 생략하면 러너의
+        PATH) 앞에 붙인 값.
 
         키의 `_`는 `-`로 바꾼다(git_commit_tool → git-commit-tool). .githooks 플러그인은
         PATH의 명령을 부르므로, 테스트 대상 클론의 install.sh를 그 이름으로 세운다.
@@ -226,7 +227,8 @@ class IsolatedRepoTestCase(unittest.TestCase):
         shim = self.temp_dir(prefix="gitformat-bin-")
         for name, target in tools.items():
             (shim / name.replace("_", "-")).symlink_to(target)
-        return os.pathsep.join([str(shim), os.environ.get("PATH", "")])
+        rest = os.environ.get("PATH", "") if base is None else str(base)
+        return os.pathsep.join([str(shim), rest])
 
     def copy_hooks(self, *omit):
         """hooks/ 사본을 임시 디렉터리에 만들고 지정한 파일을 지운다.
