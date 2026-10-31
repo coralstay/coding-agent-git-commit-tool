@@ -2,7 +2,7 @@
 id: decision-2
 title: core.hooksPath + init.templateDir 이원화 배포
 date: '2026-08-24 02:45'
-status: accepted
+status: superseded
 ---
 ## Context
 

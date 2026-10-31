@@ -27,6 +27,8 @@ HOOKS_DIR = GITFORMAT_ROOT / "hooks"
 CONF_FILE = HOOKS_DIR / "gitformat.conf"
 INSTALL_SH = GITFORMAT_ROOT / "install.sh"
 GITMESSAGE = GITFORMAT_ROOT / ".gitmessage"
+# 대상 저장소의 .githooks/로 복사되는 원본(GF-148, decision-32).
+GITHOOKS_TEMPLATE = GITFORMAT_ROOT / "githooks"
 
 USER_NAME = "gitformat-tests"
 USER_EMAIL = "tests@example.com"
@@ -34,6 +36,22 @@ SIGNED_OFF_BY = f"{USER_NAME} <{USER_EMAIL}>"
 
 CONF_GUARD_MESSAGE = "gitformat: gitformat.conf를 읽을 수 없습니다"
 BROKEN_CONF = "this is not valid git-config syntax [[[\n"
+
+# GITFORMAT_TEST_VIA_GITHOOKS=1이면 기본 훅 연결(core.hooksPath=hooks/)을
+# githooks/ 사본(디스패처 + 플러그인)으로 바꿔, 기존 테스트 전체가 대상 저장소의
+# .githooks 경로(prepare-commit-msg.d/10-commit-format → git-commit-tool hook)로도
+# 통과하는지 본다(GF-148, decision-32). 플러그인은 PATH의 git-commit-tool을 부르므로
+# 러너가 그 이름을 이 클론의 install.sh로 PATH에 세워 둬야 한다 — 다른 클론을 가리키면
+# 엉뚱한 훅을 검증하게 되므로 import 시점에 확인하고 멈춘다. hooks_path를 직접 넘기는
+# 테스트(hooks/ 사본, conf 깨뜨리기 등)는 그대로 hooks/를 직접 쓴다.
+VIA_GITHOOKS = os.environ.get("GITFORMAT_TEST_VIA_GITHOOKS") == "1"
+if VIA_GITHOOKS:
+    _tool = shutil.which("git-commit-tool")
+    if _tool is None or Path(_tool).resolve() != INSTALL_SH.resolve():
+        raise RuntimeError(
+            "GITFORMAT_TEST_VIA_GITHOOKS=1에는 PATH의 git-commit-tool이 "
+            f"{INSTALL_SH}를 가리켜야 한다 (지금: {_tool})"
+        )
 
 # 자식 프로세스 환경에서 항상 지우는 변수.
 #
@@ -185,11 +203,32 @@ class IsolatedRepoTestCase(unittest.TestCase):
         self.run_cmd_ok(["git", "config", "commit.gpgsign", "false"], cwd=repo, env=env)
         self.run_cmd_ok(["git", "config", "user.email", USER_EMAIL], cwd=repo, env=env)
         self.run_cmd_ok(["git", "config", "user.name", USER_NAME], cwd=repo, env=env)
+        if hooks_path == HOOKS_DIR and VIA_GITHOOKS:
+            hooks_path = self.githooks_copy()
         if hooks_path is not None:
             self.run_cmd_ok(
                 ["git", "config", "core.hooksPath", str(hooks_path)], cwd=repo, env=env
             )
         return repo
+
+    def githooks_copy(self):
+        """githooks/(대상 저장소의 .githooks/ 원본) 사본. 실행 권한까지 그대로 복사한다."""
+        copy = self.temp_dir(prefix="gitformat-dotgithooks-")
+        shutil.copytree(GITHOOKS_TEMPLATE, copy, dirs_exist_ok=True)
+        return copy
+
+    def path_with_tools(self, base=None, /, **tools):
+        """`이름=실제 경로` 심볼릭 링크를 담은 디렉터리를 PATH(`base`, 생략하면 러너의
+        PATH) 앞에 붙인 값.
+
+        키의 `_`는 `-`로 바꾼다(git_commit_tool → git-commit-tool). .githooks 플러그인은
+        PATH의 명령을 부르므로, 테스트 대상 클론의 install.sh를 그 이름으로 세운다.
+        """
+        shim = self.temp_dir(prefix="gitformat-bin-")
+        for name, target in tools.items():
+            (shim / name.replace("_", "-")).symlink_to(target)
+        rest = os.environ.get("PATH", "") if base is None else str(base)
+        return os.pathsep.join([str(shim), rest])
 
     def copy_hooks(self, *omit):
         """hooks/ 사본을 임시 디렉터리에 만들고 지정한 파일을 지운다.

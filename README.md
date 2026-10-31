@@ -4,7 +4,7 @@
 
 코딩 에이전트의 git 커밋 포맷을 검사하고, 누가·어떤 모델로·무슨 태스크로 만들었는지 커밋에 자동으로 기록하는 git 훅
 
-[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](./LICENSE)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](./LICENSE)
 [![Hooks: Python 3](https://img.shields.io/badge/hooks-Python%203-3776ab.svg)](./hooks/)
 [![Installer: POSIX sh](https://img.shields.io/badge/installer-POSIX%20sh-89e051.svg)](./install.sh)
 [![Requires: git + python3](https://img.shields.io/badge/requires-git%20%2B%20python3-brightgreen.svg)](#-필요조건을-말씀드립니다)
@@ -91,7 +91,8 @@ Hooks-Commit: c828491
 
 > 공식 문서: [githooks(5)](https://git-scm.com/docs/githooks). git이 제공하는 훅은 28개이고,
 > coding-agent-git-commit-tool은 그중 `prepare-commit-msg` 하나만 씁니다. push된 이력의 보호는 원격 설정이 맡습니다
-> ([다루는 범위](#-다루는-범위)).
+> ([다루는 범위](#-다루는-범위)). 이 훅은 대상 저장소 `.githooks/prepare-commit-msg` 디스패처의
+> 플러그인(`10-commit-format`)으로 실행됩니다(decision-32).
 
 | 순서 | 단계                                             | 커밋 객체가 있는가 | `--no-verify`로 건너뛰나 | coding-agent-git-commit-tool이 하는 일                                                                        |
 | ---- | ------------------------------------------------ | ------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
@@ -126,20 +127,22 @@ attestation(서명된 증명)은 아직 없고, audit(사후 검사)은 커밋 �
 
 언어별 lint는 다루지 않습니다(decision-23) — 세 기둥 어디에도 속하지 않고, 컨슈머에게
 npm/ruff/clang-format 같은 도구를 전제하게 만듭니다. 언어 검사가 필요하면 CI에서 돌리시기
-바랍니다. coding-agent-git-commit-tool이 `core.hooksPath`를 점유하므로 그 저장소의 `.git/hooks/*`는
-무시되고, 자기 훅과 함께 쓰는 방법은 아직 정하지 않았습니다.
+바랍니다. 다른 도구의 훅과는 대상 저장소의 `.githooks/`에서 함께 씁니다 — 이 도구는 그
+디렉터리의 플러그인 하나입니다([설치](#-설치-방법을-안내해-드립니다), decision-32).
 
 > 이름은 git-format → git-logbook → git-trail → coding-agent-git-commit-tool 순으로 바뀌었습니다(decision-25, decision-26, decision-29). 설정 키와 파일명
 > (`gitformat.*`, `gitformat.conf`, `.gitformat-*`)은 기존 설치를 깨지 않도록 아직 예전 이름입니다(GF-133).
 
 구성은 Python 훅 + 설정 파일 하나(`hooks/gitformat.conf`) + POSIX sh 설치
-스크립트(`install.sh`)입니다. `core.hooksPath` · `init.templateDir` ·
-`git interpret-trailers` 같은 git 내장 메커니즘만 쓰고, 훅은 Python 3 표준 라이브러리만
+스크립트(`install.sh`) + 대상 저장소에 복사하는 `.githooks` 템플릿(`githooks/`)입니다.
+`core.hooksPath` · `git interpret-trailers` 같은 git 내장 메커니즘만 쓰고, 훅은 Python 3 표준 라이브러리만
 씁니다(decision-16).
 
 ## ✅ 필요조건을 말씀드립니다
 
 - git
+- PATH의 `git-commit-tool`(이 클론의 `install.sh`를 가리키는 링크) — `.githooks` 플러그인이
+  이 이름으로 훅을 부릅니다. 없으면 경고 후 검사를 건너뜁니다(decision-32).
 - python3 — 훅이 Python 3로 작성돼 있습니다(decision-16).
   표준 라이브러리만 쓰므로 설치할 패키지는 없지만, 훅이 실행되는 시점의 PATH에서
   `python3`가 잡혀야 합니다.
@@ -162,26 +165,52 @@ python3는 이런 환경에서 보이지 않을 수 있습니다.
 
 ## 🚀 설치 방법을 안내해 드립니다
 
-### 기존 저장소에 적용하는 방법입니다
+### 저장소에 적용하는 방법입니다
+
+훅은 대상 저장소에 커밋되는 `.githooks/`에 둡니다(`core.hooksPath=.githooks`, decision-32).
+`core.hooksPath`는 디렉터리 하나만 가리키므로, 훅마다 공용 디스패처를 두고 각 도구가
+`<훅>.d/`에 한 줄짜리 플러그인으로 들어갑니다.
+
+```
+<프로젝트>/.githooks/
+  pre-commit                               공용 디스패처(POSIX sh)
+  pre-commit.d/20-source-header            exec source-header hook pre-commit
+  prepare-commit-msg                       공용 디스패처(pre-commit과 같은 파일)
+  prepare-commit-msg.d/10-commit-format    exec git-commit-tool hook prepare-commit-msg "$@"
+```
 
 ```sh
 git clone https://github.com/coralstay/coding-agent-git-commit-tool.git ~/coding-agent-git-commit-tool   # 원하는 위치에 한 번만 클론
+ln -s ~/coding-agent-git-commit-tool/install.sh ~/bin/git-commit-tool   # PATH에 있는 디렉터리라면 어디든
 cd ~/my-project
-~/coding-agent-git-commit-tool/install.sh
+git-commit-tool              # = git-commit-tool install .
+git add .githooks && git commit -m "[chore][hooks] .githooks 추가"
 ```
 
-대상 디렉터리를 인자로 주셔도 됩니다: `~/coding-agent-git-commit-tool/install.sh ~/my-project`.
-클론 위치와 폴더 이름은 자유롭게 정하셔도 됩니다 — `install.sh`는 자기가 놓인 클론의 `hooks/`를 씁니다.
+- 플러그인은 PATH의 `git-commit-tool`을 부르고, `git-commit-tool`(= `install.sh`)이 자기
+  클론의 `hooks/prepare-commit-msg`를 실행합니다. 그래서 반드시 `install.sh`를
+  **`git-commit-tool`이라는 이름으로 PATH에** 두셔야 합니다.
+- 디스패처는 `<훅>.d/*`를 이름순으로 실행하고 하나라도 실패하면 그 코드로 멈춥니다.
+  플러그인이 부르는 명령이 PATH에 없으면(다른 머신 등) 경고만 내고 건너뜁니다 —
+  그 경우 강제는 CI가 맡습니다. 단 `git-commit-tool`이 있는데 `python3`가 없으면 예전처럼
+  커밋이 막힙니다.
+- 이미 다른 `core.hooksPath`가 있거나 `.git/hooks/`에 링크가 아닌 훅이 있으면 설치가
+  아무것도 쓰지 않고 멈춥니다. 그 훅을 `.githooks/<훅>.d/` 플러그인으로 옮긴 뒤 다시
+  실행하세요. 여러 번 실행해도 결과가 같고, 직접 고친 `.githooks/` 파일은 덮지 않습니다.
 
-### 앞으로 만들 모든 새 저장소에 자동 적용하는 방법입니다
+### 예전 방식으로 설치한 저장소를 옮기는 방법입니다
+
+예전 `install.sh`는 `core.hooksPath`를 클론의 `hooks/`로 직접 잡았습니다(decision-2).
+그런 저장소는 이렇게 옮깁니다.
 
 ```sh
-~/coding-agent-git-commit-tool/install.sh --global
+git-commit-tool migrate ~/my-project
+git -C ~/my-project add .githooks
 ```
 
-`git init`/`git clone`을 실행할 때마다 훅과 커밋 템플릿이 자동으로 심어집니다
-(`init.templateDir`). 대화형 터미널에서 인자 없이 실행하시면 이 적용 여부를 물어보고,
-`--global`/`--no-global`로 비대화형 지정도 하실 수 있습니다.
+예전 `install.sh --global`(전역 `init.templateDir`)은 없앴습니다(decision-32). 새 저장소마다
+`git-commit-tool`을 한 번 실행하세요. 예전에 설정한 전역 값은
+`git config --global --unset init.templateDir`로 지웁니다.
 
 ## 📚 더 자세한 내용이 궁금하시다면
 
@@ -193,11 +222,11 @@ cd ~/my-project
 - 설계 배경과 각 결정 이유는 `backlog decision list`에서
   확인하실 수 있습니다.
 - 작업 단위와 진행 상황은 `backlog board`에서 확인하실 수 있습니다.
-- 라이선스는 GNU AGPL-3.0입니다(전문: [`LICENSE`](./LICENSE), [GNU AGPL-3.0 원문](https://www.gnu.org/licenses/agpl-3.0.html)) — 외부 문서를 원문 그대로
+- 라이선스는 GNU AGPL-3.0-only입니다(전문: [`LICENSE`](./LICENSE), [GNU AGPL-3.0 원문](https://www.gnu.org/licenses/agpl-3.0.html)) — 외부 문서를 원문 그대로
   vendoring하지 않는다는 점도 함께 말씀드립니다(decision-14).
   - 상용 라이선스 — 저작권자가 단독이므로 듀얼 라이선스가 가능합니다. AGPL 조건(네트워크
     서비스 제공 시 수정 소스 공개)이 맞지 않는 상용 사용은 별도로 협의합니다.
     문의: <coralstay3595@gmail.com> (또는 이 저장소의 GitHub Issue).
-  - 기여 — 듀얼 라이선스 유지를 위해, 기여자는 자신의 기여를 AGPL-3.0과 상용 라이선스 양쪽으로
+  - 기여 — 듀얼 라이선스 유지를 위해, 기여자는 자신의 기여를 AGPL-3.0-only와 상용 라이선스 양쪽으로
     배포할 권리를 저작권자에게 허여하는 데 동의한 것으로 봅니다.
   - 이전 배포 — 커밋 `a7a57e1` 시점까지는 MIT로 배포되었고 그 스냅샷은 계속 MIT입니다.

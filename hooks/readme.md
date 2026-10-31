@@ -1,10 +1,25 @@
 # hooks
 
-**무엇인가**: git이 커밋마다 직접 실행하는 훅 코드와 그 설정 파일을 담는다.
-`install.sh`가 대상 저장소의 `core.hooksPath`를 이 디렉터리로 맞추거나(로컬 설치),
-`init.templateDir` 경유로 새 저장소의 `.git/hooks/`에 이 디렉터리를 가리키는
-심볼릭 링크를 심는다(전역 설치, decision-2). 어느 쪽이든 실행되는 파일은 여기 있는
-바로 이 파일들이다.
+**무엇인가**: 커밋마다 실행되는 훅 코드와 그 설정 파일을 담는다. git이 이 디렉터리를
+직접 보지는 않는다 — 대상 저장소는 `core.hooksPath=.githooks`이고(decision-32), 그
+`.githooks/prepare-commit-msg` 디스패처가 플러그인 `prepare-commit-msg.d/10-commit-format`을
+실행하면, 플러그인이 `git-commit-tool hook prepare-commit-msg "$@"`(= 이 클론의
+`install.sh`)를 부르고, install.sh가 여기 있는 `prepare-commit-msg`를 절대경로로 exec한다.
+
+```
+git commit
+  → <대상>/.githooks/prepare-commit-msg            공용 디스패처(원본: ../githooks/)
+  → <대상>/.githooks/prepare-commit-msg.d/10-commit-format
+  → git-commit-tool hook prepare-commit-msg "$@"   PATH의 링크 → 이 클론의 install.sh
+  → <클론>/hooks/prepare-commit-msg "$@"           이 디렉터리
+```
+
+훅은 `realpath(__file__)`로 자기 위치를 정하므로 `gitformat.conf`와 `Hooks-Commit`(이
+클론의 HEAD)은 대상 저장소가 아니라 이 클론 기준으로 해석된다 — 예전의 로컬 설치
+(`core.hooksPath`=이 디렉터리)나 `init.templateDir`이 심은 심볼릭 링크(decision-2, 폐지)로
+불릴 때도 똑같다. `git-commit-tool`이 PATH에 없으면 디스패처가 경고 후 이 훅을
+건너뛴다(강제는 CI의 몫). `python3`가 없으면 install.sh의 가드가 exit 1로 커밋을 막는다 —
+가드 없이 exec하면 `env`의 127이 "명령 없음"으로 읽혀 조용히 건너뛰어지기 때문이다.
 
 **훅 생애주기**: 이 디렉터리의 훅은 `prepare-commit-msg` 하나다. 커밋 한 번에 이렇게 돈다.
 
@@ -65,9 +80,12 @@ Homebrew/pyenv로 깐 python3를 못 찾을 수 있다. 코드로 우회하지 �
 
 **관련 명령**:
 
-- `./install.sh <대상 저장소>` — 대상 저장소의 `core.hooksPath`/`commit.template` 설정
-- `./install.sh --global <대상 저장소>` — 위에 더해 `template/hooks/` 심볼릭 링크 생성과 전역 `init.templateDir` 설정
+- `git-commit-tool <대상 저장소>` — 대상에 `.githooks/`를 만들고 `core.hooksPath=.githooks`/`commit.template` 설정
+- `git-commit-tool migrate <대상 저장소>` — `core.hooksPath`가 이 디렉터리인 예전 설치를 `.githooks`로 옮김
+- `git-commit-tool hook prepare-commit-msg <메시지 파일> ...` — 플러그인이 부르는 진입점(직접 쓸 일은 없다)
 - `git config --get core.hooksPath` — 어떤 훅이 실제로 연결돼 있는지 확인
 - `git config --file hooks/gitformat.conf --list` — 내부 기본값 전체 조회
 - `git commit --no-verify` — `prepare-commit-msg`는 건너뛸 수 없어 효과가 없다(decision-18)
 - `python3 -m unittest discover -s tests` — 훅 전체 동작 검증
+- `PATH=<git-commit-tool 링크가 있는 디렉터리>:$PATH GITFORMAT_TEST_VIA_GITHOOKS=1 python3 -m unittest discover -s tests`
+  — 같은 스위트를 `.githooks` 플러그인 경로로 검증
