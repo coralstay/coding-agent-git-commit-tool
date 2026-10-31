@@ -1,16 +1,18 @@
 ---
-id: DRAFT-23
+id: GF-150
 title: >-
   source-header 적용:
   coralstay-software-factory/components/coding-agent-git-commit-tool
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-31T11:08:00Z'
-updated_date: '2026-10-31T11:08:00Z'
+updated_date: '2026-10-31T11:17:00Z'
 labels:
   - source-header
   - rollout
 dependencies: []
+documentation:
+  - /Users/flynn_macpro/.claude/plans/giggly-kindling-snowglobe.md
 ---
 
 ## Description
