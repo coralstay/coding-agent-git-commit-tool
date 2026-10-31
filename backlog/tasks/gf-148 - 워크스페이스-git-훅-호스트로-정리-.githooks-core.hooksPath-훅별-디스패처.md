@@ -4,7 +4,7 @@ title: '워크스페이스 git 훅 호스트로 정리: .githooks + core.hooksPa
 status: In Progress
 assignee: []
 created_date: '2026-10-30T19:04:00Z'
-updated_date: '2026-10-30T19:36:00Z'
+updated_date: '2026-10-31T11:02:00Z'
 labels:
   - hooks
   - workspace
@@ -40,19 +40,19 @@ core.hooksPath는 저장소당 디렉터리 하나만 가리키므로, 지금처
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 공용 디스패처(POSIX sh)가 .githooks/<hook>.d/*를 이름순으로 실행하고, 하나라도 실패하면 그 exit 코드로 중단한다. 플러그인이 부르는 명령이 PATH에 없으면 경고 후 건너뛴다
-- [ ] #2 커밋 형식·트레일러 로직이 prepare-commit-msg.d/10-commit-format 플러그인으로 동작하고, 기존 tests/ 전체가 통과한다
-- [ ] #3 install이 대상 저장소에 .githooks 템플릿(pre-commit, prepare-commit-msg 디스패처 + 기본 플러그인)을 만들고 core.hooksPath=.githooks를 설정한다. 다른 hooksPath나 링크가 아닌 기존 훅이 있으면 덮지 않고 중단한다
-- [ ] #4 pre-commit.d/20-source-header 플러그인이 source-header hook pre-commit을 부른다(source-header가 없으면 건너뜀)
-- [ ] #5 hooksPath가 클론 경로인 기존 설치 저장소를 .githooks로 옮기는 migrate 명령이 있다
-- [ ] #6 README·hooks/readme.md를 갱신하고, templateDir(decision-2)을 어떻게 바꾸는지 decision 기록을 남긴다
+- [x] #1 공용 디스패처(POSIX sh)가 .githooks/<hook>.d/*를 이름순으로 실행하고, 하나라도 실패하면 그 exit 코드로 중단한다. 플러그인이 부르는 명령이 PATH에 없으면 경고 후 건너뛴다
+- [x] #2 커밋 형식·트레일러 로직이 prepare-commit-msg.d/10-commit-format 플러그인으로 동작하고, 기존 tests/ 전체가 통과한다
+- [x] #3 install이 대상 저장소에 .githooks 템플릿(pre-commit, prepare-commit-msg 디스패처 + 기본 플러그인)을 만들고 core.hooksPath=.githooks를 설정한다. 다른 hooksPath나 링크가 아닌 기존 훅이 있으면 덮지 않고 중단한다
+- [x] #4 pre-commit.d/20-source-header 플러그인이 source-header hook pre-commit을 부른다(source-header가 없으면 건너뜀)
+- [x] #5 hooksPath가 클론 경로인 기존 설치 저장소를 .githooks로 옮기는 migrate 명령이 있다
+- [x] #6 README·hooks/readme.md를 갱신하고, templateDir(decision-2)을 어떻게 바꾸는지 decision 기록을 남긴다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 tests/ 전체 통과(기존 + 디스패처·install·migrate 신규), 로그를 Implementation Notes에 첨부
-- [ ] #2 임시 저장소에서 install → 커밋 형식 검사와 source-header 검사가 둘 다 실제로 동작함을 실측
-- [ ] #3 README·hooks/readme.md·decision 갱신
+- [x] #1 tests/ 전체 통과(기존 + 디스패처·install·migrate 신규), 로그를 Implementation Notes에 첨부
+- [x] #2 임시 저장소에서 install → 커밋 형식 검사와 source-header 검사가 둘 다 실제로 동작함을 실측
+- [x] #3 README·hooks/readme.md·decision 갱신
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -75,3 +75,25 @@ core.hooksPath는 저장소당 디렉터리 하나만 가리키므로, 지금처
 3. 기존 설치(클론 경로) 저장소 이전 명령
 4. README·hooks/readme.md·decision 갱신
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## 검증 로그 (메인 세션 재실행, 2026-10-31)
+$ python3 -m unittest discover -s tests → Ran 144 tests in 58.0s, OK (기준 113 + 신규 31)
+서브에이전트 실행: GITFORMAT_TEST_VIA_GITHOOKS=1 모드(디스패처·플러그인 경유)에서도 144개 OK, shellcheck·ruff 통과
+E2E(메인 재현): 임시 저장소에서 git-commit-tool 설치 → core.hooksPath=.githooks → 헤더 없는 a.py 커밋이 H001로 차단
+E2E(서브에이전트): 커밋 형식 위반 거부, 형식·헤더 정상이면 커밋 성공, Hooks-Commit = 클론 HEAD, migrate rc=0
+
+## 판단 기록
+- --global(init.templateDir) 기능을 없애면서 관련 테스트 2개를 삭제하고 2개를 수정했다(decision-32: templateDir은 .git/ 안만 채울 수 있어 커밋되는 .githooks와 맞지 않음). GF-16 회귀 테스트는 링크를 직접 심는 방식으로 유지.
+- decision-2를 superseded로 표시, decision-32가 대체.
+- 알려진 결과: PATH에 도구가 없으면 플러그인을 건너뜀(127) → 강제는 CI가 맡음.
+- 이 저장소 자신은 아직 옛 방식(hooksPath=클론 hooks/). migrate 적용은 유저 결정 후 별도 진행.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+워크스페이스 git 훅 호스트로 정리했다. 대상 저장소의 커밋된 .githooks에 훅별 공용 디스패처(<hook>.d/* 이름순 실행, 127이면 건너뜀)를 두고, 커밋 형식·트레일러는 prepare-commit-msg.d/10-commit-format, source-header는 pre-commit.d/20-source-header 플러그인으로 연결했다. install은 core.hooksPath=.githooks를 설정하고 기존 hooksPath·훅이 있으면 멈추며, migrate는 옛 설치를 옮긴다. decision-32가 decision-2(templateDir)를 대체한다. 테스트 144개 통과(일반·.githooks 경유 두 모드).
+<!-- SECTION:FINAL_SUMMARY:END -->
