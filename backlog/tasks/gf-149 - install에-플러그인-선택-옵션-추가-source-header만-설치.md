@@ -1,14 +1,16 @@
 ---
-id: DRAFT-22
+id: GF-149
 title: 'install에 플러그인 선택 옵션 추가: source-header만 설치'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-31T11:07:00Z'
-updated_date: '2026-10-31T11:07:00Z'
+updated_date: '2026-10-31T11:17:00Z'
 labels:
   - hooks
   - install
 dependencies: []
+documentation:
+  - /Users/flynn_macpro/.claude/plans/giggly-kindling-snowglobe.md
 ---
 
 ## Description
