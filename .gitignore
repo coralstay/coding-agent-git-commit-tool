@@ -1,0 +1,29 @@
+# 예전 install.sh --global(GF-148, decision-32에서 폐지)이 만들던 클론 경로 심볼릭
+# 링크. 예전 클론에 남아 있을 수 있어 계속 무시한다(GF-9, decision-2).
+/template/hooks/
+.claude/
+
+# 로컬 개발 환경의 도구 버전 고정(asdf 등). 개발자마다 달라질 수 있어 커밋하지 않는다.
+.tool-versions
+.env
+.env.*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+.Trash-*
+
+# 에디터
+.vscode/
+.idea/
+
+# 훅 스크립트를 python3로 실행할 때 생기는 바이트코드 캐시. 커밋하지 않는다.
+__pycache__/
+*.pyc
+
+# vim 스왑 파일. 77c9322에서 실수로 커밋된 적이 있다.
+*.swp

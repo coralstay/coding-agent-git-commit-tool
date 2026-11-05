@@ -1,0 +1,42 @@
+
+# [type][subsystem] <description>
+#   ↳ subsystem은 생략 가능: [type] <description>
+#   ↳ 50자 이내로 작성(commit-msg가 검증, 유니코드 문자 수 기준),
+#     명령형 현재형으로 작성 ("추가한다" / "add", not "추가함")
+#
+# (빈 줄)
+#
+# [optional body]
+#   ↳ 무엇을 "왜" 바꿨는지 설명 (어떻게가 아니라 - diff가 이미 어떻게를 보여준다).
+#     한 줄 72자 이내로 줄바꿈(commit-msg가 검증, footer 트레일러 줄은 예외).
+#     본문이 있으면 제목과의 사이에 반드시 빈 줄이 필요합니다(commit-msg가 검증).
+#
+# [optional footer(s)]
+#   ↳ git trailer 형식(Token: value). 예:
+#     Task-Id: GF-3
+#     Fixes: <hash> ("<원인 커밋 제목>")   - 이 버그를 만든 커밋을 아는 경우에만
+#     Signed-off-by: <이름> <이메일>        - post-commit이 커미터 정보로 자동 삽입
+#     BREAKING CHANGE: <설명>
+#
+# ── type 목록 ──
+#   feat      새 기능 추가
+#   fix       버그 수정
+#   docs      문서 변경
+#   style     코드 의미에 영향 없는 스타일 변경(포맷팅, 세미콜론 등)
+#   refactor  기능 변경 없는 코드 구조 개선
+#   perf      성능 개선
+#   test      테스트 추가/수정
+#   build     빌드 시스템 또는 외부 의존성 변경
+#   ci        CI 설정/스크립트 변경
+#   chore     위 항목에 속하지 않는 기타 변경사항
+#   revert    이전 커밋 되돌리기
+#
+# ── subsystem (선택) ──
+#   type 뒤에 대괄호로 영향 범위를 명사로 표기.  예: [fix][parser] 빈 입력 처리
+#
+# ── 원자적 커밋 ──
+#   커밋 하나 = 논리적 변경 하나. 공백 정리와 기능 변경을 한 커밋에 섞지 않기.
+#
+# ── 이 템플릿 사용법 ──
+#   git config commit.template .gitmessage
+#   (coding-agent-git-commit-tool install.sh를 사용하면 자동으로 설정됩니다 — GF-8 참고)

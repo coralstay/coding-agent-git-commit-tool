@@ -1,0 +1,3 @@
+#!/bin/sh
+# 소스 헤더 규칙(dev-tools/source-header, decision-32). 없으면 디스패처가 건너뜀.
+exec source-header hook pre-commit

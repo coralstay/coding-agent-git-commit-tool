@@ -1,0 +1,3 @@
+#!/bin/sh
+# 커밋 형식 검사·트레일러 삽입(coding-agent-git-commit-tool, decision-18·32). 없으면 디스패처가 건너뜀.
+exec git-commit-tool hook prepare-commit-msg "$@"
