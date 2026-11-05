@@ -4,10 +4,15 @@ title: 'pre-push 플러그인: 서명 없는 커밋과 수동 검증 게이트�
 status: To Do
 assignee: []
 created_date: '2026-11-05T18:56:00Z'
-updated_date: '2026-11-05T20:28:00Z'
+updated_date: '2026-11-05T20:29:00Z'
 labels:
   - security
 dependencies: []
+references:
+  - claude-code-agile-hooks TASK-73(card_gate.py)
+  - GF-130
+documentation:
+  - ~/.claude/plans/giggly-kindling-snowglobe.md
 ---
 
 ## Description
