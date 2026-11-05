@@ -1,7 +1,7 @@
 ---
-id: DRAFT-22
+id: GF-151
 title: 'pre-push 플러그인: 서명 없는 커밋과 수동 검증 게이트를 통과하지 못한 Done 카드의 push를 git 단계에서 거부'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-11-05T18:56:00Z'
 updated_date: '2026-11-05T20:28:00Z'
