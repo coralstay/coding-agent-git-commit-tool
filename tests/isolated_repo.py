@@ -1,3 +1,12 @@
+# ---
+# title: isolated_repo
+# description: 테스트마다 훅이 연결된 임시 git 저장소를 새로 만들어 주는 블랙박스 테스트 헬퍼
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """격리된 임시 git 저장소 헬퍼(GF-124). 기존 tests/helpers/git-format.bash 대체.
 
 이 저장소의 테스트는 훅을 import하지 않는다 — 임시 저장소에서 실제 `git commit`을

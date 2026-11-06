@@ -1,3 +1,12 @@
+# ---
+# title: test_config_file_unreadable
+# description: gitformat.conf를 읽을 수 없을 때 훅과 install.sh가 즉시 멈추는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """gitformat.conf를 읽을 수 없을 때 각 파일이 즉시 멈추는지 본다(구 conf-guard.bats).
 
 GF-76에서 CONF를 읽는 파일들에 "읽기 검증 가드"를 넣었고, GF-77에서 그 가드가 텍스트로

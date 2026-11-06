@@ -1,3 +1,12 @@
+# ---
+# title: test_install_githooks
+# description: install이 대상 저장소에 .githooks를 만들고 hooksPath를 설정하며 멱등인지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # GF-148: install이 대상 저장소에 .githooks를 만들고 core.hooksPath=.githooks를 설정
 """install.sh(= git-commit-tool)의 .githooks 설치를 본다(decision-32).
 

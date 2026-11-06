@@ -1,3 +1,12 @@
+# ---
+# title: test_shell_metacharacters_safe
+# description: 브랜치명과 커밋 메시지의 셸 메타문자가 실행되지 않는지 검증하는 네거티브 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """브랜치명·커밋 메시지에 섞인 셸 메타문자가 실행되지 않는지 본다(구 robustness-injection.bats).
 
 GF-27, decision-8: 표준 인증이 아니라 훅이 브랜치명/커밋 메시지를 항상 인자 배열로

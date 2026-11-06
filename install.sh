@@ -1,4 +1,13 @@
 #!/bin/sh
+# ---
+# title: install
+# description: 대상 저장소에 .githooks 디스패처와 플러그인을 설치하고 hooksPath를 설정하는 설치 스크립트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # coding-agent-git-commit-tool 설치 스크립트(~/githubs/bin에서는 `git-commit-tool`).
 # 대상 저장소에 커밋되는 .githooks/(공용 디스패처 + 플러그인)를 만들고
 # core.hooksPath=.githooks와 commit.template을 설정한다(decision-32, decision-2 대체).

@@ -1,3 +1,12 @@
+# ---
+# title: test_editor_commit_rejected
+# description: 에디터를 여는 커밋 경로는 거부하고 -m/-F 경로는 허용하는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """에디터로 커밋하려는 경로가 거부되는지 본다(GF-125 AC #2, decision-18).
 
 prepare-commit-msg는 에디터가 열리기 **전에** 실행된다(doc-15 실측). 그래서 이 훅은

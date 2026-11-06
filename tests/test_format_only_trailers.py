@@ -1,3 +1,12 @@
+# ---
+# title: test_format_only_trailers
+# description: 훅이 토큰·툴콜 측정 트레일러를 붙이지 않고 포맷 트레일러만 다루는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """커밋 포맷 전용 — 훅이 토큰·툴콜을 측정하지 않는다(GF-146, decision-31).
 
 GF-146 전에는 AI 도구가 감지된 커밋에 Tokens-Used/Tool-Calls를 붙이려고 세션

@@ -1,3 +1,12 @@
+# ---
+# title: test_trailer_ai_attribution
+# description: AI 도구 귀속 트레일러 AI-Agent의 생성과 fail-open 동작을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """AI 도구 귀속 트레일러 AI-Agent를 본다(decision-5, decision-19, GF-128).
 
 구 robustness-post-commit.bats(GF-25, GF-97, GF-98)의 결함주입·슬러그 케이스에서

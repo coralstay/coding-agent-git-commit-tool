@@ -1,3 +1,12 @@
+# ---
+# title: test_githooks_source_header
+# description: 20-source-header 플러그인이 source-header hook pre-commit을 호출하는 연결을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # GF-148: pre-commit.d/20-source-header 플러그인이 source-header hook pre-commit을 부름
 """pre-commit.d/20-source-header 플러그인을 실제 커밋으로 본다(decision-32).
 

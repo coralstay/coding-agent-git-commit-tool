@@ -1,3 +1,12 @@
+# ---
+# title: test_config_keys_match_hooks
+# description: 훅이 읽는 설정 키와 gitformat.conf의 키가 어긋나지 않는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """값은 같아야 하지만 로직/문서는 공유하지 않는 항목들이 실제로 일치하는지 본다.
 
 구 consistency.bats. 런타임 결합 없이 테스트로만 drift를 잡는다는 게 이 프로젝트의

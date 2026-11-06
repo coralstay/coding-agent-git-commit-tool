@@ -1,3 +1,12 @@
+# ---
+# title: test_replay_commits_untouched
+# description: cherry-pick·rebase·병합 같은 재생 커밋을 훅이 건드리지 않는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """재생·병합 커밋에서 새 훅이 아무 것도 하지 않는지 본다(GF-125 AC #1, decision-18).
 
 재생 커밋은 이미 검증된 커밋의 복제다 — 다시 도장을 찍는 것도, 다시 재는 것도 틀렸다.

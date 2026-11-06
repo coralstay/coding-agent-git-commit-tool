@@ -1,3 +1,12 @@
+# ---
+# title: test
+# description: 이 저장소 자신의 훅 코드 품질을 검사하는 개발용 CI 워크플로
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 name: test
 
 # coding-agent-git-commit-tool 자체의 개발용 CI(GF-21, decision-8). 컨슈머에 배포하는 verify.yml과

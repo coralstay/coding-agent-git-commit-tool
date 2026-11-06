@@ -1,3 +1,12 @@
+# ---
+# title: test_message_format_enforced
+# description: prepare-commit-msg가 커밋 메시지 형식·길이·Fixes·AI 모델 게이트를 강제하는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """prepare-commit-msg가 커밋 메시지 형식·길이·Fixes·AI 모델 게이트를 강제하는지 본다.
 
 구 robustness-commit-msg.bats(GF-23)에서 브랜치 Task-Id 강제를 뺀 나머지.

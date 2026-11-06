@@ -1,3 +1,12 @@
+# ---
+# title: test_verify_bypass_detection
+# description: 폐지된 Verify-Bypassed 트레일러가 다시 나타나지 않음을 고정하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Verify-Bypassed 트레일러가 더 이상 붙지 않는지 본다(GF-128 AC #10, decision-18).
 
 decision-3 시절 post-commit은 검증 마커가 없으면 --no-verify 우회로 보고

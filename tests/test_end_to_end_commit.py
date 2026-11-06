@@ -1,3 +1,12 @@
+# ---
+# title: test_end_to_end_commit
+# description: 커밋 한 번이 훅 전체를 통과하는지 보는 최소 종단 간 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """커밋 한 번이 훅 전체를 통과하는지 보는 최소 확인(구 smoke.bats, GF-21).
 
 세부 동작은 각 동작별 테스트 파일이 따로 검증한다 — 여기서는 하네스와 훅 연결

@@ -1,3 +1,12 @@
+# ---
+# title: test_branch_task_id_required
+# description: prepare-commit-msg가 브랜치명의 Task-Id 패턴이 없는 커밋을 거부하는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """prepare-commit-msg가 브랜치명의 Task-Id 패턴을 강제하는지 본다(decision-4).
 
 구 robustness-commit-msg.bats(GF-23)의 브랜치 관련 케이스. <prefix>-<번호> 패턴이

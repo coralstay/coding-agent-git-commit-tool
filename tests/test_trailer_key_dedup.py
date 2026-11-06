@@ -1,3 +1,12 @@
+# ---
+# title: test_trailer_key_dedup
+# description: 트레일러 중복 판정이 값이 아니라 키 단위로 이뤄지는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """트레일러 중복 판정이 키 단위로 이뤄지는지 본다(GF-128 AC #1~#4, decision-19).
 
 GF-128 전에는 post-commit이 `git interpret-trailers --parse` 출력에서 "키: 값"이 정확히

@@ -1,3 +1,12 @@
+# ---
+# title: test_githooks_dispatcher
+# description: .githooks 공용 디스패처의 플러그인 실행 순서·중단·건너뜀 동작을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # GF-148: .githooks 공용 디스패처의 실행 순서·중단·건너뜀 동작
 """githooks/의 공용 디스패처 동작을 본다(decision-32).
 

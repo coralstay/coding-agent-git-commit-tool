@@ -1,3 +1,12 @@
+# ---
+# title: test_githooks_commit_format
+# description: .githooks의 10-commit-format 플러그인 경로로 커밋 형식 검사가 동작하는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # GF-148: 커밋 형식·트레일러 로직이 .githooks 플러그인(10-commit-format)으로 동작
 """prepare-commit-msg.d/10-commit-format 플러그인 경로로 실제 커밋을 태운다(decision-32).
 

@@ -1,3 +1,12 @@
+# ---
+# title: test_python3_missing
+# description: PATH에 python3이 없을 때 훅이 커밋을 막고 원인을 드러내는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """훅이 실행되는 시점의 PATH에 python3이 없을 때의 동작을 본다(구 robustness-python-path.bats).
 
 GF-113, decision-16: sh 시절에는 없던 실패 모드라 "sh/Python 동일성 재검증"이 아니라

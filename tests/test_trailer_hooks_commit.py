@@ -1,3 +1,12 @@
+# ---
+# title: test_trailer_hooks_commit
+# description: Hooks-Commit과 Signed-off-by 트레일러가 규칙대로 붙는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Hooks-Commit과 Signed-off-by를 본다.
 
 구 robustness-post-commit.bats(GF-25, GF-82)의 해당 케이스에서 출발했다. Hooks-Commit은

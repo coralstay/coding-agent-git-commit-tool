@@ -1,3 +1,12 @@
+# ---
+# title: test_install_script
+# description: install.sh의 비대화형 분기와 에러 처리를 HOME 격리 상태에서 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """install.sh의 공통 분기를 본다(구 robustness-install.bats).
 
 GF-26, decision-8: 표준 인증이 아니라 install.sh의 실제 분기(비대화형/에러 처리)에

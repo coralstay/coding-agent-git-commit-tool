@@ -1,3 +1,12 @@
+# ---
+# title: test_non_utf8_locale
+# description: UTF-8 로케일이 없는 환경에서도 훅의 한국어 출력이 깨지지 않는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """로케일이 UTF-8을 제공하지 않는 환경에서 훅이 한국어를 출력할 때의 동작을 본다.
 
 구 robustness-locale.bats(GF-116, decision-16). sh 시절의 LC_ALL=C.UTF-8

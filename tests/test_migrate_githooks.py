@@ -1,3 +1,12 @@
+# ---
+# title: test_migrate_githooks
+# description: 옛 hooksPath 설치를 .githooks로 옮기는 migrate의 동작과 건드리지 않는 경우를 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # GF-148: hooksPath가 이 도구의 클론 경로인 옛 설치를 .githooks로 옮기는 migrate
 """`git-commit-tool migrate`를 본다(decision-32).
 
