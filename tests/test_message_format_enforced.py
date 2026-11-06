@@ -48,7 +48,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
 
     def test_subject의_느낌표는_더_이상_지원하지_않는다(self):
         """[동등분할] BREAKING CHANGE(subject의 !)는 더 이상 지원하지 않아 거부된다 (GF-82)"""
-        self.assertRejected(self.commit("[feat!] 하위호환 깨는 변경"))
+        self.assertRejected(self.commit("[feat!] 하위호환 깨는 변경"))  # ---- 1
 
     def test_footer의_BREAKING_CHANGE는_통과한다(self):
         """[동등분할] BREAKING CHANGE(footer)는 통과한다"""
@@ -84,7 +84,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
         """[결정테이블] 비-claude-code 도구 + aiModel 미설정이면 거부된다"""
         self.assertRejected(
             self.commit(
-                "[feat] other tool no model", env={"AI_AGENT": "other-tool_1-0"}
+                "[feat] other tool no model", env={"AI_AGENT": "other-tool_1-0"}  # ---- 2
             )
         )
 
@@ -92,7 +92,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
         """[결정테이블] 비-claude-code 도구 + aiModel 설정했지만 화이트리스트에 없으면 거부된다"""
         self.git_ok("config", "gitformat.aiModel", "not-a-real-model")
         self.assertRejected(
-            self.commit("[feat] unknown model", env={"AI_AGENT": "other-tool_1-0"})
+            self.commit("[feat] unknown model", env={"AI_AGENT": "other-tool_1-0"})  # ---- 3
         )
 
     def test_화이트리스트에_있는_aiModel은_통과한다(self):
@@ -106,10 +106,8 @@ class MessageFormatTest(IsolatedRepoTestCase):
 
     def test_셸_메타문자가_있어도_실행되지_않는다(self):
         """[구문테스트] 커밋 메시지에 셸 메타문자가 있어도 실행되지 않고 안전하게 처리된다"""
-        # subject 길이 제한(GF-83, 50자)에 걸리지 않도록 짧은 파일명을 쓴다 —
-        # 이 테스트의 목적은 셸 인젝션 방지 확인이지 길이 검증이 아니다.
         self.assertAccepted(
-            self.commit("[feat] $(touch p1) `touch p2`;touch p3|touch p4")
+            self.commit("[feat] $(touch p1) `touch p2`;touch p3|touch p4")  # ---- 4
         )
         for name in ("p1", "p2", "p3", "p4"):
             self.assertFalse((self.repo / name).exists(), f"{name}이 생성됐다")
@@ -128,7 +126,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
 
     def test_제목과_본문_사이에_빈_줄이_없으면_거부된다(self):
         """[GF-82] 본문이 있는데 제목과의 사이에 빈 줄이 없으면 거부된다"""
-        self.assertRejected(self.commit("[feat] 제목\n본문이 빈 줄 없이 바로 이어짐"))
+        self.assertRejected(self.commit("[feat] 제목\n본문이 빈 줄 없이 바로 이어짐"))  # ---- 5
 
     def test_빈_줄로_구분된_본문은_통과한다(self):
         """[GF-82] 본문이 있고 빈 줄로 구분돼 있으면 통과한다"""
@@ -149,7 +147,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
         self.git_ok("add", "a.txt")
         self.assertRejected(
             self.commit(
-                "[fix] 후속 수정\n\nFixes: 0000000000000000000000000000000000dead"
+                "[fix] 후속 수정\n\nFixes: 0000000000000000000000000000000000dead"  # ---- 6
             )
         )
 
@@ -165,11 +163,11 @@ class MessageFormatTest(IsolatedRepoTestCase):
 
     def test_subject가_51자면_거부된다(self):
         """[GF-83] subject가 51자면 거부된다 (경계값)"""
-        self.assertRejected(self.commit("[feat] " + "x" * 44))
+        self.assertRejected(self.commit("[feat] " + "x" * 44))  # ---- 7
 
     def test_글자_수는_바이트가_아니라_코드포인트로_센다(self):
         """[GF-83] 글자 수는 바이트가 아니라 유니코드 문자 단위로 센다 - 한글 27자(67바이트)는 통과한다"""
-        self.assertAccepted(self.commit("[feat] " + "가" * 20))
+        self.assertAccepted(self.commit("[feat] " + "가" * 20))  # ---- 8
 
     def test_한글이어도_50자를_넘으면_거부된다(self):
         """[GF-83] 한글이어도 문자 수 자체가 50자를 넘으면 거부된다 (52자)"""
@@ -185,13 +183,13 @@ class MessageFormatTest(IsolatedRepoTestCase):
 
     def test_등록된_트레일러_토큰_줄은_72자를_넘어도_통과한다(self):
         """[GF-83] 등록된 트레일러 토큰으로 시작하는 줄은 72자를 넘어도 통과한다"""
-        self.assertAccepted(self.commit("[feat] 제목\n\nBREAKING CHANGE: " + "y" * 70))
+        self.assertAccepted(self.commit("[feat] 제목\n\nBREAKING CHANGE: " + "y" * 70))  # ---- 9
 
     # ── --no-verify로 우회할 수 없다 (GF-127, decision-18) ───────────
 
     def test_no_verify로도_형식_검증을_건너뛸_수_없다(self):
         """[GF-127] --no-verify를 줘도 형식이 틀린 메시지는 거부된다"""
-        result = self.commit("형식 없는 제목", "--no-verify")
+        result = self.commit("형식 없는 제목", "--no-verify")  # ---- 10
         self.assertRejected(result)
         self.assertIn("커밋 메시지가 [type][subsystem] 형식이 아닙니다", result.output)
         self.assertRejected(self.git("log", "-1"))
@@ -203,7 +201,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
     def test_no_verify로도_브랜치_Task_Id_강제를_건너뛸_수_없다(self):
         """[GF-127] --no-verify를 줘도 Task-Id 없는 non-exempt 브랜치는 거부된다"""
         self.git_ok("checkout", "-q", "-b", "no-task-id-here")
-        self.assertRejected(self.commit("[feat] missing task id", "--no-verify"))
+        self.assertRejected(self.commit("[feat] missing task id", "--no-verify"))  # ---- 11
 
     # ── git revert가 만드는 제목 예외 (GF-127, 유저 결정 (b)) ─────────
 
@@ -213,7 +211,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
         result = self.git("revert", "--no-edit", "HEAD")
         self.assertAccepted(result)
         self.assertEqual(2, self.commit_count())
-        self.assertEqual('Revert "[feat] 되돌릴 커밋"', self.head_subject())
+        self.assertEqual('Revert "[feat] 되돌릴 커밋"', self.head_subject())  # ---- 12
 
     def test_50자_제목을_revert해도_길이_제한에_걸리지_않는다(self):
         """[GF-127] git이 만든 revert 제목은 50자를 넘어도 통과한다 (60자)"""
@@ -229,8 +227,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
         self.assertAccepted(self.git("revert", "--no-edit", "HEAD"))
         self.assertAccepted(self.git("revert", "--no-edit", "HEAD"))
         reapply = self.head_subject()
-        # git 버전에 따라 Reapply "..." 또는 Revert "Revert "..."" 둘 중 하나다.
-        self.assertIn(
+        self.assertIn(  # ---- 13
             reapply,
             ('Reapply "[feat] 되돌릴 커밋"', 'Revert "Revert "[feat] 되돌릴 커밋""'),
         )
@@ -247,7 +244,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
             "fixup! [feat] x",
         ):
             with self.subTest(subject=subject):
-                self.assertRejected(self.commit(subject))
+                self.assertRejected(self.commit(subject))  # ---- 14
 
     def test_revert_제목도_본문_빈_줄_규칙은_지킨다(self):
         """[GF-127] revert 제목 예외는 제목 형식·길이만이다 — 빈 줄 규칙은 그대로다"""
@@ -271,7 +268,7 @@ class MessageFormatTest(IsolatedRepoTestCase):
         self.git_ok("config", "core.hooksPath", str(hooks_copy))
         result = self.commit("[feat] 정상 제목")
         self.assertRejected(result)
-        self.assertIn("type 목록을 읽을 수 없습니다", result.output)
+        self.assertIn("type 목록을 읽을 수 없습니다", result.output)  # ---- 15
 
     def test_type_목록이_비면_revert_제목도_거부된다(self):
         """[GF-127] revert 제목 예외가 깨진 설정을 가리지 않는다"""
@@ -294,3 +291,71 @@ class MessageFormatTest(IsolatedRepoTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 subject의 !는 더 이상 지원하지 않는다
+#   설명: GF-82에서 서브젝트가 [type][subsystem] 프리픽스로 바뀌면서 BREAKING CHANGE는 subject의 !가 아니라 footer로만
+#   표기한다. [feat!]는 type 목록에 없는 것으로 거부된다.
+#   관련: GF-82, README.md
+#   개념: 커밋 제목 형식
+# 2 비-claude-code 도구는 aiModel이 있어야 한다
+#   설명: 결정 테이블: AI_AGENT가 비어 있으면 AI-Model 게이트를 건너뛰고, claude-code면 aiModel 없이도 통과하며(모델은 트랜스크립트에서
+#   읽는다), 그 밖의 도구는 gitformat.aiModel이 설정돼 있어야 한다. 설정이 없으면 모델을 알 수 없으므로 거부한다.
+#   관련: decision-19, tests/test_trailer_ai_attribution.py
+#   개념: 결정 테이블(동등분할)
+# 3 화이트리스트에 없는 aiModel은 거부
+#   설명: aiModel이 설정돼 있어도 gitformat.conf의 허용 목록에 없으면 거부한다. 오타나 임의 문자열이 출처 기록에 들어가지 않게 한다.
+#   관련: hooks/gitformat.conf
+#   개념: 화이트리스트
+# 4 셸 메타문자가 있어도 실행되지 않는다
+#   설명: subject 길이 제한(GF-83, 50자)에 걸리지 않도록 짧은 파일명을 쓴다. 이 테스트의 목적은 셸 인젝션 방지 확인이지 길이 검증이 아니다. 더
+#   공격적인 조합은 test_shell_metacharacters_safe.py가 본다.
+#   관련: tests/test_shell_metacharacters_safe.py, GF-83
+#   개념: 셸 인젝션 방지
+# 5 제목과 본문 사이에 빈 줄이 있어야 한다
+#   설명: 본문이 있는데 제목과의 사이에 빈 줄이 없으면 거부한다(GF-82, 리누스 스타일). git이 제목을 첫 문단으로 읽으므로 빈 줄이 없으면 본문이 제목으로
+#   이어 붙는다.
+#   관련: GF-82
+#   개념: 커밋 메시지 형식 규칙
+# 6 Fixes:는 실재하는 커밋을 가리켜야 한다
+#   설명: 존재하지 않는 해시를 가리키는 Fixes: 트레일러는 거부한다. Fixes:가 없는 것은 허용한다(강제 아님).
+#   관련: GF-82
+# 7 subject는 50자까지 (경계값)
+#   설명: 정확히 50자는 통과하고 51자는 거부된다. 본문 줄은 72자까지다.
+#   관련: GF-83
+#   개념: 경계값
+# 8 글자 수는 바이트가 아니라 코드포인트
+#   설명: 글자 수는 바이트가 아니라 유니코드 문자 단위로 센다. 한글 27자(67바이트)는 통과한다.
+#   관련: GF-83, tests/test_non_utf8_locale.py
+#   개념: 코드포인트 vs 바이트
+# 9 등록된 트레일러 토큰 줄은 72자 예외
+#   설명: 본문 줄 72자 제한은 등록된 트레일러 토큰(BREAKING CHANGE 등)으로 시작하는 줄에는 적용하지 않는다. URL 같은 긴 값이 들어갈 수 있어서다.
+#   관련: GF-83, hooks/gitformat.conf, tests/test_trailer_ai_attribution.py
+#   개념: 트레일러 토큰
+# 10 --no-verify로도 형식 검증을 건너뛸 수 없다
+#   설명: GF-127에서 메시지 검증이 commit-msg에서 --no-verify로 건너뛸 수 없는 prepare-commit-msg로 옮겨왔다. 형식이 틀린
+#   메시지는 --no-verify를 줘도 거부되고 커밋 객체도 만들어지지 않는다. 길이 검증과 브랜치 Task-Id 강제도 마찬가지다.
+#   관련: GF-127, decision-18
+#   개념: fail-closed, --no-verify 우회 불가
+# 11 브랜치 Task-Id 강제도 우회 불가
+#   설명: Task-Id 없는 non-exempt 브랜치는 --no-verify를 줘도 거부된다.
+#   관련: GF-127, tests/test_branch_task_id_required.py
+# 12 git revert가 만드는 제목은 형식 예외
+#   설명: 충돌 없는 git revert --no-edit은 Revert "..." 제목을 만드는데 [type][subsystem] 형식이 아니다. GF-127에서 유저
+#   결정 (b)로 이 제목을 형식·길이 규칙의 예외로 인정했다.
+#   관련: GF-127, tests/test_replay_commits_untouched.py
+#   개념: revert 제목 예외
+# 13 git 버전에 따라 Reapply 또는 Revert "Revert ..."
+#   설명: revert의 revert는 git 2.43+에서 Reapply "..."로, 그 이전에는 Revert "Revert "...""로 나온다. 둘 다 예외로
+#   인정해야 git 버전에 따라 테스트가 깨지지 않는다.
+#   관련: GF-127
+# 14 revert처럼 보이는 손글씨 제목은 거부
+#   설명: 따옴표 없는 Revert 제목이나 소문자 revert, 다른 git 자동 제목(fixup!)은 예외가 아니다. 예외는 git이 만든 정확한 형태뿐이다.
+#   관련: GF-127
+#   개념: 예외의 좁은 범위
+# 15 type 목록이 비면 조용히 통과하지 않고 원인을 밝힌다
+#   설명: conf에 gitformat.type이 하나도 없으면 모든 제목이 type 목록에 없는 것으로 걸리거나, 더 나쁘게는 검사가 사라진다. 원인을 밝히며
+#   거부한다. revert 제목 예외도 깨진 설정을 가리지 않는다.
+#   관련: GF-76, GF-127, tests/test_config_file_unreadable.py
+#   개념: 읽기 검증 가드(fail-closed)

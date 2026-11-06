@@ -20,9 +20,7 @@ on:
   push:
     branches: [main]
 
-# 체크아웃과 읽기 전용 정적분석/테스트만 하고 아무 것도 쓰지 않으므로
-# (decision-8: 권한 최소화 점검, GF-28) contents:read만으로 충분하다.
-permissions:
+permissions:  # ---- 1
   contents: read
 
 jobs:
@@ -30,32 +28,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # 이 스텝은 정적 분석 그 이상이다 - `-s sh`는 install.sh가 POSIX sh 문법만
-      # 쓰는지 강제하는 게이트다(decision-9: 두 셸 스타일 가이드의 표기 관례만
-      # 참고하고 문법은 POSIX만 유지하기로 함). 이 스텝을 지우거나 `-s bash`로
-      # 바꾸면 그 정책이 깨진다. hooks/는 GF-108~GF-111에서 전부 Python으로 포팅돼
-      # (decision-16) 대상에서 빠졌고 아래 ruff 스텝이 대신 맡는다 - install.sh만
-      # decision-9의 적용을 그대로 받는다. githooks/의 디스패처도 대상 저장소에서
-      # sh로 도는 POSIX 스크립트라 같은 게이트를 받는다(GF-148, decision-32).
-      - name: ShellCheck (POSIX 준수 게이트, decision-9)
+      - name: ShellCheck (POSIX 준수 게이트, decision-9)  # ---- 2
         run: shellcheck -s sh install.sh githooks/pre-commit githooks/prepare-commit-msg
-      # 이 job은 checkout 외에 아무것도 설치하지 않는다(테스트 job과 별개다).
-      - name: Install ruff
+      - name: Install ruff  # ---- 3
         run: pip install --quiet ruff
-      # ruff에 디렉터리를 넘기면 확장자가 .py인 파일만 훑는다(실측 확인). git이
-      # 이름을 고정하는 훅(prepare-commit-msg, GF-128부터 하나)은 확장자가
-      # 없어, Python으로 포팅돼도 hooks/ 하나만 지정하면 조용히 검사에서 빠진다 -
-      # 검사가 아무것도 안 하고 통과하는 GF-32와 같은 유형이다. 그래서 셔뱅으로
-      # Python 파일을 찾아 함께 넘긴다. 이 근거는 GF-135로 hooks/checks/*.py가
-      # 사라진 뒤에도 그대로다 - 남은 대상이 전부 확장자 없는 훅이라 오히려 셔뱅
-      # 탐색이 유일한 발견 수단이다. 파일명을 나열하는 위 ShellCheck 스텝과 반대다.
-      # tests/는 전부 확장자가 .py라(GF-124) 디렉터리 지정만으로 충분해 셔뱅 탐색
-      # 대상에 넣지 않는다.
-      # 찾은 파일은 따옴표 없는 변수의 단어분리에 맡기지 않고 배열로 넘긴다 -
-      # 단어분리 여부는 셸마다 다르고(zsh는 기본적으로 하지 않는다) 그런 형태는
-      # 러너 셸이 바뀌는 순간 조용히 대상이 하나로 뭉개진다. 대상이 0개면 역시
-      # 조용히 통과하지 않고 test -n에서 멈춘다.
-      - name: Ruff (Python 린트)
+      - name: Ruff (Python 린트)  # ---- 4
         shell: bash
         run: |
           set -u
@@ -71,24 +48,48 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # 이 job은 checkout 외에 아무것도 설치하지 않는다. GF-135까지는 언어별 검사의
-      # 실도구(sqlfluff/ruff)를 깔았다 - GF-22에서 그 설치가 빠져 "차단돼야 할"
-      # 테스트가 도구 부재로 조용히 통과한 사고가 있었기 때문이다. 검사 자체가
-      # 제거되며(decision-23) 그 스텝도 필요 없어졌고, 남은 테스트는 git과 python3
-      # 표준 라이브러리만 쓴다.
-      #
-      # 테스트 러너는 Python 표준 라이브러리의 unittest다(GF-124) - 설치할 것이
-      # 없다. discover가 tests/를 sys.path에 넣으므로 공용 헬퍼(isolated_repo)를
-      # 평범한 import로 쓴다.
-      - name: Run tests
+      - name: Run tests  # ---- 5
         run: python3 -m unittest discover -s tests -v
-      # 같은 스위트를 대상 저장소의 .githooks 경로로 한 번 더 돌린다(GF-148,
-      # decision-32): 기본 훅 연결이 githooks/ 사본(디스패처 + 10-commit-format
-      # 플러그인)으로 바뀌고, 플러그인이 PATH의 git-commit-tool을 부른다. 그 이름은
-      # 이 체크아웃의 install.sh여야 한다 - isolated_repo가 import 시점에 확인한다.
-      - name: Run tests via .githooks plugin path
+      - name: Run tests via .githooks plugin path  # ---- 6
         run: |
           mkdir -p "$RUNNER_TEMP/bin"
           ln -sf "$PWD/install.sh" "$RUNNER_TEMP/bin/git-commit-tool"
           PATH="$RUNNER_TEMP/bin:$PATH" GITFORMAT_TEST_VIA_GITHOOKS=1 \
             python3 -m unittest discover -s tests -v
+
+
+# ======== 노트 ========
+# 1 권한은 contents: read만
+#   설명: 체크아웃과 읽기 전용 정적분석/테스트만 하고 아무 것도 쓰지 않으므로 contents:read만으로 충분하다(권한 최소화 점검).
+#   관련: decision-8, GF-28
+#   개념: 최소 권한 원칙
+# 2 ShellCheck는 POSIX 준수 게이트
+#   설명: 이 스텝은 정적 분석 그 이상이다. -s sh는 install.sh가 POSIX sh 문법만 쓰는지 강제하는 게이트다(decision-9: 두 셸 스타일
+#   가이드의 표기 관례만 참고하고 문법은 POSIX만 유지하기로 함). 이 스텝을 지우거나 -s bash로 바꾸면 그 정책이 깨진다. hooks/는
+#   GF-108~GF-111에서 전부 Python으로 포팅돼(decision-16) 대상에서 빠졌고 아래 ruff 스텝이 대신 맡는다. install.sh만
+#   decision-9의 적용을 그대로 받는다. githooks/의 디스패처도 대상 저장소에서 sh로 도는 POSIX 스크립트라 같은 게이트를 받는다(GF-148,
+#   decision-32).
+#   관련: install.sh, githooks/, decision-9, decision-16, decision-32
+#   개념: POSIX sh
+# 3 static-analysis job은 checkout 외에 설치하지 않는다
+#   설명: 이 job은 checkout 외에 아무것도 설치하지 않는다(테스트 job과 별개다). ruff만 개발 도구로 pip 설치한다.
+# 4 ruff 대상은 셔뱅으로 찾은 파일을 배열로 넘긴다
+#   설명: ruff에 디렉터리를 넘기면 확장자가 .py인 파일만 훑는다(실측 확인). git이 이름을 고정하는 훅(prepare-commit-msg)은 확장자가 없어,
+#   hooks/ 하나만 지정하면 조용히 검사에서 빠진다. 검사가 아무것도 안 하고 통과하는 GF-32와 같은 유형이다. 그래서 셔뱅으로 Python 파일을 찾아 함께
+#   넘긴다. 이 근거는 GF-135로 hooks/checks/*.py가 사라진 뒤에도 그대로다 - 남은 대상이 전부 확장자 없는 훅이라 오히려 셔뱅 탐색이 유일한 발견
+#   수단이다. 파일명을 나열하는 위 ShellCheck 스텝과 반대다. tests/는 전부 확장자가 .py라(GF-124) 디렉터리 지정만으로 충분해 셔뱅 탐색 대상에
+#   넣지 않는다. 찾은 파일은 따옴표 없는 변수의 단어분리에 맡기지 않고 배열로 넘긴다 - 단어분리 여부는 셸마다 다르고(zsh는 기본적으로 하지 않는다) 러너 셸이
+#   바뀌는 순간 조용히 대상이 하나로 뭉개진다. 대상이 0개면 역시 조용히 통과하지 않고 test -n에서 멈춘다.
+#   관련: GF-32, GF-124, GF-128, GF-135, hooks/prepare-commit-msg
+#   개념: 공허한 통과 방지, 셔뱅 탐색
+# 5 테스트 러너는 unittest, 설치할 것이 없다
+#   설명: 이 job은 checkout 외에 아무것도 설치하지 않는다. GF-135까지는 언어별 검사의 실도구(sqlfluff/ruff)를 깔았는데, GF-22에서 그
+#   설치가 빠져 '차단돼야 할' 테스트가 도구 부재로 조용히 통과한 사고가 있었기 때문이다. 검사 자체가 제거되며(decision-23) 그 스텝도 필요 없어졌고, 남은
+#   테스트는 git과 python3 표준 라이브러리만 쓴다. 러너는 Python 표준 라이브러리의 unittest다(GF-124). discover가 tests/를
+#   sys.path에 넣으므로 공용 헬퍼(isolated_repo)를 평범한 import로 쓴다.
+#   관련: GF-22, GF-124, GF-135, decision-23, tests/isolated_repo.py
+# 6 같은 스위트를 .githooks 플러그인 경로로 한 번 더
+#   설명: 기본 훅 연결이 githooks/ 사본(디스패처 + 10-commit-format 플러그인)으로 바뀌고, 플러그인이 PATH의 git-commit-tool을
+#   부른다. 그 이름은 이 체크아웃의 install.sh여야 한다. isolated_repo가 import 시점에 확인한다.
+#   관련: GF-148, decision-32, tests/isolated_repo.py(VIA_GITHOOKS)
+#   개념: 두 번째 테스트 모드

@@ -30,7 +30,7 @@ from isolated_repo import IsolatedRepoTestCase
 class ShellMetacharactersSafeTest(IsolatedRepoTestCase):
     def assertNotCreated(self, *names):
         for name in names:
-            self.assertFalse((self.repo / name).exists(), f"{name}이 생성됐다")
+            self.assertFalse((self.repo / name).exists(), f"{name}이 생성됐다")  # ---- 1
 
     def stage_one_file(self):
         self.write("a.txt", "hi\n")
@@ -46,7 +46,7 @@ class ShellMetacharactersSafeTest(IsolatedRepoTestCase):
 
     def test_서브셸_패턴이_섞여도_실행되지_않는다(self):
         """[브랜치명] $()+$IFS 서브셸 패턴이 섞여도 실행되지 않고 커밋이 안전하게 처리된다"""
-        self.git_ok("checkout", "-q", "-b", "GF-1-$(touch${IFS}pwned-a)")
+        self.git_ok("checkout", "-q", "-b", "GF-1-$(touch${IFS}pwned-a)")  # ---- 2
         self.stage_one_file()
         self.assertAccepted(self.commit("[feat] subshell in branch name"))
         self.assertNotCreated("pwned-a")
@@ -65,7 +65,7 @@ class ShellMetacharactersSafeTest(IsolatedRepoTestCase):
             "checkout",
             "-q",
             "-b",
-            "GF-1-;touch-pwned-c|touch-pwned-d&&touch-pwned-e",
+            "GF-1-;touch-pwned-c|touch-pwned-d&&touch-pwned-e",  # ---- 3
         )
         self.stage_one_file()
         self.assertAccepted(self.commit("[feat] shell operators in branch name"))
@@ -79,7 +79,7 @@ class ShellMetacharactersSafeTest(IsolatedRepoTestCase):
         self.stage_one_file()
         self.assertAccepted(
             self.commit(
-                "[feat] 복합 페이로드\n\n$(touch pwned-f)\n`touch pwned-g`\n"
+                "[feat] 복합 페이로드\n\n$(touch pwned-f)\n`touch pwned-g`\n"  # ---- 4
                 "; touch pwned-h | touch pwned-i"
             )
         )
@@ -91,21 +91,15 @@ class ShellMetacharactersSafeTest(IsolatedRepoTestCase):
         self.git_ok("checkout", "-q", "-b", "GF-3-nonutf8")
         self.stage_one_file()
         bad_msg = self.temp_dir() / "bad-message"
-        bad_msg.write_bytes(b"[feat] broken \xff\xfe bytes\n")
+        bad_msg.write_bytes(b"[feat] broken \xff\xfe bytes\n")  # ---- 5
         self.assertAccepted(self.git("commit", "-F", bad_msg))
         self.assertTrailerCount(self.head_message(), "Task-Id: GF-3", 1)
 
     def test_매우_긴_라인이_섞여도_트레일러_삽입이_깨지지_않는다(self):
         """[커밋메시지] 매우 긴 라인이 섞여도 트레일러 삽입이 깨지지 않는다"""
-        # 이 테스트의 목적은 interpret-trailers 삽입(GF-128부터
-        # prepare-commit-msg)이 매우 긴 라인 앞에서 깨지지 않는지 확인하는 것이지, GF-83의 본문 줄 길이(72자) 검증
-        # 자체를 테스트하는 게 아니다. 예전에는 20000자 본문 줄을 --no-verify로
-        # commit-msg를 건너뛰어 통과시켰지만, GF-127에서 검증이 --no-verify로도
-        # 건너뛸 수 없는 prepare-commit-msg로 옮겨와 그 우회가 닫혔다. 그래서 72자
-        # 예외를 받는 등록된 트레일러 토큰 줄(BREAKING CHANGE)로 긴 라인을 넣는다.
         self.git_ok("checkout", "-q", "-b", "GF-4-longline")
         self.stage_one_file()
-        long_body = "BREAKING CHANGE: " + "y" * 20000
+        long_body = "BREAKING CHANGE: " + "y" * 20000  # ---- 6
         self.assertAccepted(self.commit(f"[feat] 긴 본문\n\n{long_body}"))
         message = self.head_message()
         self.assertTrailerCount(message, "Task-Id: GF-4", 1)
@@ -114,3 +108,33 @@ class ShellMetacharactersSafeTest(IsolatedRepoTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 파일이 생기지 않았음이 곧 실행되지 않았다는 증거
+#   설명: 페이로드가 touch를 심어 두므로 해당 파일이 만들어졌는지로 셸 실행 여부를 판정한다.
+#   관련: GF-27, decision-8
+#   개념: 네거티브 테스트
+# 2 서브셸 패턴 페이로드 ($IFS로 공백 대신)
+#   설명: git 브랜치명은 공백을 허용하지 않는다(check-ref-format). 그래서 페이로드는 공백 없는 형태, 예컨대 $IFS로 공백을 대신하는 형태를 쓴다.
+#   셸 인젝션에서 흔히 쓰이는 공백 우회 기법이라 오히려 더 현실적인 공격 벡터다. 훅은 브랜치명/커밋 메시지를 항상 인자 배열로 다루고 셸을 거치지 않는다.
+#   관련: GF-27, decision-8, hooks/prepare-commit-msg
+#   개념: 인자 배열(셸 비경유)
+# 3 셸 연산자 페이로드
+#   설명: 세미콜론/파이프/&&를 한 브랜치명에 섞어 어느 하나라도 해석되면 pwned 파일이 생기게 한다.
+#   관련: GF-27
+# 4 개행+메타문자 복합 페이로드
+#   설명: 커밋 메시지 쪽은 test_message_format_enforced.py가 이미 다루므로 여기서는 개행+메타문자 조합처럼 더 공격적인 조합만 본다.
+#   트레일러가 실제로 붙는 경로(Task-Id 브랜치)에서 interpret-trailers 삽입이 깨지지 않는지 함께 확인한다.
+#   관련: tests/test_message_format_enforced.py
+# 5 UTF-8이 아닌 바이트가 섞인 메시지
+#   설명: \xff\xfe 같은 바이트는 디코드에 실패하기 쉬운 입력이다. 훅이 죽지 않고 트레일러를 정상으로 붙여야 한다.
+#   관련: GF-116
+#   개념: non-UTF8
+# 6 긴 라인은 72자 예외를 받는 등록 트레일러 줄로 넣는다
+#   설명: 이 테스트의 목적은 interpret-trailers 삽입(GF-128부터 prepare-commit-msg)이 매우 긴 라인 앞에서 깨지지 않는지 확인하는
+#   것이지 GF-83의 본문 줄 길이(72자) 검증 자체를 테스트하는 게 아니다. 예전에는 20000자 본문 줄을 --no-verify로 commit-msg를 건너뛰어
+#   통과시켰지만 GF-127에서 검증이 --no-verify로도 건너뛸 수 없는 prepare-commit-msg로 옮겨와 그 우회가 닫혔다. 그래서 72자 예외를 받는
+#   등록된 트레일러 토큰 줄(BREAKING CHANGE)로 긴 라인을 넣는다.
+#   관련: GF-83, GF-127, GF-128
+#   개념: interpret-trailers

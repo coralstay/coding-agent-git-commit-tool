@@ -44,7 +44,7 @@ class GithooksDispatcherTest(IsolatedRepoTestCase):
         path.write_text(
             f'#!/bin/sh\necho "{name} $*" >> "{self.log}"\n{body}\n', encoding="utf-8"
         )
-        path.chmod(0o755 if executable else 0o644)
+        path.chmod(0o755 if executable else 0o644)  # ---- 1
         return path
 
     def ran(self):
@@ -63,7 +63,7 @@ class GithooksDispatcherTest(IsolatedRepoTestCase):
         self.plugin("pre-commit", "10-a", "exit 0")
         self.plugin("pre-commit", "20-b", "exit 0")
         self.assertAccepted(self.dispatch("pre-commit"))
-        self.assertEqual(["10-a ", "20-b ", "30-c "], self.ran())
+        self.assertEqual(["10-a ", "20-b ", "30-c "], self.ran())  # ---- 2
 
     def test_실패한_플러그인의_종료_코드로_멈춘다(self):
         """GF-148#1 플러그인이 실패하면 뒤 플러그인을 실행하지 않고 그 종료 코드로 끝난다"""
@@ -71,7 +71,7 @@ class GithooksDispatcherTest(IsolatedRepoTestCase):
         self.plugin("pre-commit", "20-fail", "exit 3")
         self.plugin("pre-commit", "30-never", "exit 0")
         result = self.dispatch("pre-commit")
-        self.assertEqual(3, result.returncode, str(result))
+        self.assertEqual(3, result.returncode, str(result))  # ---- 3
         self.assertEqual(["10-ok ", "20-fail "], self.ran())
 
     def test_명령이_없으면_경고하고_건너뛴다(self):
@@ -81,14 +81,14 @@ class GithooksDispatcherTest(IsolatedRepoTestCase):
         result = self.dispatch("pre-commit")
         self.assertAccepted(result)
         self.assertIn("10-missing", result.output)
-        self.assertIn("건너뜁니다", result.output)
+        self.assertIn("건너뜁니다", result.output)  # ---- 4
         self.assertEqual(["10-missing ", "20-ok "], self.ran())
 
     # == Coverage ==
 
     def test_두_디스패처는_같은_파일이다(self):
         """pre-commit과 prepare-commit-msg 디스패처는 내용이 같다(이름으로 .d를 고른다)"""
-        self.assertEqual(
+        self.assertEqual(  # ---- 5
             (GITHOOKS_TEMPLATE / "pre-commit").read_bytes(),
             (GITHOOKS_TEMPLATE / "prepare-commit-msg").read_bytes(),
         )
@@ -101,7 +101,7 @@ class GithooksDispatcherTest(IsolatedRepoTestCase):
             f'for a in "$@"; do echo "[$a]" >> "{self.log}"; done',
         )
         self.assertAccepted(
-            self.dispatch("prepare-commit-msg", "msg file", "message", "")
+            self.dispatch("prepare-commit-msg", "msg file", "message", "")  # ---- 6
         )
         self.assertEqual(
             ["10-args msg file message ", "[msg file]", "[message]", "[]"], self.ran()
@@ -113,7 +113,7 @@ class GithooksDispatcherTest(IsolatedRepoTestCase):
         self.plugin("pre-commit", "20-ok", "exit 0")
         result = self.dispatch("pre-commit")
         self.assertAccepted(result)
-        self.assertIn("10-noexec", result.output)
+        self.assertIn("10-noexec", result.output)  # ---- 7
         self.assertEqual(["20-ok "], self.ran())
 
     def test_플러그인_디렉터리가_없거나_비면_통과한다(self):
@@ -133,3 +133,32 @@ class GithooksDispatcherTest(IsolatedRepoTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 실행 권한 유무를 플러그인마다 조절
+#   설명: 실행 권한이 없는 파일이 조용히 넘어가지 않는지 보려고 같은 헬퍼로 0o755와 0o644를 모두 만든다.
+# 2 플러그인은 이름순으로 실행
+#   설명: 만든 순서(30, 10, 20)와 무관하게 이름순(10, 20, 30)으로 실행된다. 플러그인 접두 번호가 곧 실행 순서다.
+#   관련: GF-148#1, githooks/pre-commit
+#   개념: 접두 번호 순서
+# 3 실패한 플러그인의 종료 코드로 멈춤
+#   설명: 하나라도 실패하면 뒤 플러그인(30-never)을 실행하지 않고 그 종료 코드(3) 그대로 끝난다. 종료 코드가 곧 git이 보는 결과다.
+#   관련: GF-148#1
+#   개념: fail-closed
+# 4 명령이 없으면 경고만 내고 건너뜀
+#   설명: 플러그인이 부르는 명령이 PATH에 없으면(sh의 exec 실패 = 종료 코드 127) 경고만 내고 다음으로 간다. 다른 머신에서 그 도구가 없다고 커밋이
+#   막히면 안 되고 강제는 CI가 맡는다.
+#   관련: GF-148#1, decision-32
+#   개념: fail-open(의도된)
+# 5 두 디스패처는 바이트 단위로 같은 파일
+#   설명: 디스패처는 자기 이름에 .d를 붙인 디렉터리를 고르므로 내용이 이름과 무관하게 같다. 두 사본이 갈라지면 한쪽 훅만 다르게 동작하게 된다.
+#   관련: githooks/pre-commit, githooks/prepare-commit-msg
+#   개념: 단일 원천(SSOT)
+# 6 훅 인자를 공백·빈 값까지 그대로 전달
+#   설명: prepare-commit-msg의 인자는 "$@"로 넘겨야 공백이 든 경로('msg file')와 빈 source('')가 보존된다.
+#   관련: githooks/prepare-commit-msg
+#   개념: 인자 전달("$@")
+# 7 실행 권한 없는 플러그인은 조용히 넘기지 않음
+#   설명: 권한이 없어 실행되지 않은 검사가 통과로 오인되지 않도록 경고를 내고 건너뛴다.
+#   관련: GF-148#1

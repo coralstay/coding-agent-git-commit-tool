@@ -41,10 +41,10 @@ class MigrateGithooksTest(IsolatedRepoTestCase):
 
     def test_클론_경로_hooksPath를_githooks로_옮긴다(self):
         """GF-148#5 hooksPath=이 클론의 hooks/인 저장소를 .githooks로 옮긴다"""
-        self.git_ok("config", "core.hooksPath", HOOKS_DIR)
+        self.git_ok("config", "core.hooksPath", HOOKS_DIR)  # ---- 1
         result = self.migrate()
         self.assertAccepted(result)
-        self.assertEqual(".githooks", self.config("core.hooksPath"))
+        self.assertEqual(".githooks", self.config("core.hooksPath"))  # ---- 2
         for name in ("pre-commit", "prepare-commit-msg"):
             self.assertEqual(
                 (GITHOOKS_TEMPLATE / name).read_bytes(),
@@ -70,12 +70,12 @@ class MigrateGithooksTest(IsolatedRepoTestCase):
         result = self.migrate()
         self.assertRejected(result)
         self.assertIn("install", result.output)
-        self.assertEqual("", self.config("core.hooksPath"))
+        self.assertEqual("", self.config("core.hooksPath"))  # ---- 3
 
         self.git_ok("config", "core.hooksPath", ".husky")
         self.assertRejected(self.migrate())
         self.assertEqual(".husky", self.config("core.hooksPath"))
-        self.assertFalse((self.repo / ".githooks").exists())
+        self.assertFalse((self.repo / ".githooks").exists())  # ---- 4
 
     # == Coverage ==
 
@@ -83,14 +83,14 @@ class MigrateGithooksTest(IsolatedRepoTestCase):
         """멱등: 두 번째 migrate는 아무것도 바꾸지 않고 성공한다"""
         self.git_ok("config", "core.hooksPath", HOOKS_DIR)
         self.assertAccepted(self.migrate())
-        self.assertAccepted(self.migrate())
+        self.assertAccepted(self.migrate())  # ---- 5
         self.assertEqual(".githooks", self.config("core.hooksPath"))
 
     def test_다른_클론의_hooks도_옛_설치로_알아본다(self):
         """hooksPath가 이 도구의 다른 클론 hooks/여도 옛 설치로 보고 옮긴다"""
         other = self.temp_dir(prefix="gitformat-otherclone-") / "hooks"
         shutil.copytree(HOOKS_DIR, other)
-        self.git_ok("config", "core.hooksPath", other)
+        self.git_ok("config", "core.hooksPath", other)  # ---- 6
         self.assertAccepted(self.migrate())
         self.assertEqual(".githooks", self.config("core.hooksPath"))
 
@@ -102,8 +102,35 @@ class MigrateGithooksTest(IsolatedRepoTestCase):
         result = self.migrate()
         self.assertAccepted(result)
         self.assertIn(str(own_hook.name), result.output)
-        self.assertEqual("#!/bin/sh\nexit 0\n", own_hook.read_text(encoding="utf-8"))
+        self.assertEqual("#!/bin/sh\nexit 0\n", own_hook.read_text(encoding="utf-8"))  # ---- 7
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 옛 설치 = hooksPath가 이 클론의 hooks/
+#   설명: 옛 설치(decision-2)는 대상 저장소의 core.hooksPath가 이 클론의 hooks/를 직접 가리킨다. migrate는 그런 저장소만
+#   .githooks로 옮긴다.
+#   관련: decision-2, decision-32
+# 2 hooksPath가 .githooks로 바뀜
+#   설명: 옮긴 뒤 hooksPath는 클론 경로가 아니라 저장소 안의 상대 경로 .githooks다. 그래야 다른 클론·CI에서도 같은 훅이 동작한다.
+#   관련: GF-148#5
+# 3 옛 설치가 아니면 건드리지 않고 멈춤
+#   설명: hooksPath가 없거나 다른 경로(.husky 등)면 아무것도 바꾸지 않고 실패하며 install을 안내한다.
+#   관련: GF-148#5
+#   개념: fail-closed
+# 4 다른 hooksPath 저장소에는 .githooks도 만들지 않음
+#   설명: 실패했을 때 설정뿐 아니라 파일도 쓰이지 않았음을 확인한다.
+# 5 두 번째 migrate는 아무것도 바꾸지 않고 성공
+#   설명: 이미 .githooks로 옮긴 저장소에서 다시 불러도 성공하고 설정이 그대로여야 한다.
+#   관련: GF-148#5
+#   개념: 멱등(idempotent)
+# 6 다른 클론의 hooks/도 옛 설치로 인식
+#   설명: hooksPath가 이 도구의 다른 클론 hooks/여도 옛 설치로 보고 옮긴다. install.sh는 경로가 이 클론의 hooks/이거나, 아니면 그
+#   디렉터리에 prepare-commit-msg와 gitformat.conf가 모두 있을 때 이 도구의 hooks/로 본다.
+#   관련: install.sh(migrate)
+# 7 .git/hooks의 직접 만든 훅은 막지 않고 알린다
+#   설명: 옛 설치에서도 hooksPath 때문에 이미 무시되던 훅이므로 migrate를 막지 않고 목록만 알린다. 내용은 그대로 둔다.
+#   관련: tests/test_install_githooks.py

@@ -36,7 +36,7 @@ class EditorCommitRejectedTest(IsolatedRepoTestCase):
         directory = self.temp_dir(prefix="gitformat-editor-")
         marker = directory / "editor-ran"
         editor = directory / "editor.sh"
-        editor.write_text(
+        editor.write_text(  # ---- 1
             "#!/bin/sh\n"
             f'printf "ran\\n" > "{marker}"\n'
             'tmp="$(mktemp)"\n'
@@ -67,15 +67,11 @@ class EditorCommitRejectedTest(IsolatedRepoTestCase):
         self.assertRejected(result)
         self.assertIn("git commit -m", result.output)
         self.assertNotIn("Traceback", result.output)
-        # 거부가 에디터보다 먼저 일어났는지까지 본다 — 에디터가 열린 뒤에 막았다면
-        # 사람이 타이핑한 내용을 훅이 볼 수 있다는 뜻이고 decision-18의 전제가 틀린
-        # 것이 된다.
-        self.assertFalse(
+        self.assertFalse(  # ---- 2
             marker.exists(),
             f"에디터가 열렸다 — 훅이 그보다 먼저 막지 못했다:\n{result}",
         )
-        # 종료 코드만 보면 안 된다 — 커밋 객체가 정말 안 생겼는지까지 확인한다.
-        self.assertEqual(before, self.head_hash())
+        self.assertEqual(before, self.head_hash())  # ---- 3
         self.assertEqual(1, self.commit_count())
 
     def test_commit_template이_설정돼_있어도_거부된다(self):
@@ -89,7 +85,7 @@ class EditorCommitRejectedTest(IsolatedRepoTestCase):
         """
         template = self.temp_dir(prefix="gitformat-tmpl-") / "template.txt"
         template.write_text("# 템플릿 안내 주석\n", encoding="utf-8")
-        self.git_ok("config", "commit.template", str(template))
+        self.git_ok("config", "commit.template", str(template))  # ---- 4
 
         editor, marker = self.make_editor()
         before = self.baseline_commit()
@@ -141,3 +137,23 @@ class EditorCommitRejectedTest(IsolatedRepoTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 GIT_EDITOR 시뮬레이션은 기존 내용을 보존해야 함
+#   설명: 스크립트가 메시지 파일을 >로 덮어쓰면 훅이 넣어둔 내용이 사라져 '훅이 동작하지 않았다'고 오판하게 된다(doc-15에 기록된 실수). 실제 에디터는 파일을
+#   열어 고치므로 시뮬레이션도 cat으로 기존 내용을 이어 붙인다. 스크립트 안의 한국어 주석 줄은 그 설명이 담긴 문자열 데이터라 그대로 둔다. 실행되면 마커 파일을
+#   남겨 에디터가 열렸는지 본다.
+#   관련: doc-15, decision-18
+# 2 거부는 에디터가 열리기 전에 일어나야 함
+#   설명: 에디터가 열린 뒤에 막았다면 사람이 타이핑한 내용을 훅이 볼 수 있다는 뜻이고 decision-18의 전제(prepare-commit-msg는 에디터 전에
+#   실행된다)가 틀린 것이 된다. 마커 파일이 없어야 거부 시점이 검증된다.
+#   관련: decision-18, GF-125
+#   개념: fail-closed
+# 3 종료 코드만 보지 않고 커밋 객체가 안 생겼는지 확인
+#   설명: 거부됐다는 종료 코드만으로는 부족하다. HEAD가 기준 커밋 그대로인지 확인해 커밋 객체가 정말 만들어지지 않았음을 고정한다.
+# 4 commit.template이 있어도 거부
+#   설명: source($2)로 판정하면 template이 설정된 저장소(source=template)와 설정이 없는 저장소(source 인자 없음)가 갈린다.
+#   source 기반 판정은 개발 기계에서는 통과하고 CI에서는 실패했다. 이 테스트가 두 조건을 모두 고정한다.
+#   관련: GF-125, tests/isolated_repo.py(GIT_CONFIG_GLOBAL)
+#   개념: 회귀 방지

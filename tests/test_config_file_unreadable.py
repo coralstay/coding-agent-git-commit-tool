@@ -38,29 +38,23 @@ class ConfigFileUnreadableTest(IsolatedRepoTestCase):
     def setUp(self):
         self.hooks_copy = self.copy_hooks()
         self.break_conf(self.hooks_copy)
-        # 가드가 conf를 읽는 시점에 걸리는지만 보므로 core.hooksPath는 연결하지 않고
-        # 각 파일을 직접 실행한다.
-        self.repo = self.make_repo(hooks_path=None)
+        self.repo = self.make_repo(hooks_path=None)  # ---- 1
 
     def assertConfGuardFires(self, result):
         self.assertNotEqual(0, result.returncode, str(result))
-        self.assertIn(CONF_GUARD_MESSAGE, result.output)
+        self.assertIn(CONF_GUARD_MESSAGE, result.output)  # ---- 2
 
     def test_prepare_commit_msg가_멈춘다(self):
         """prepare-commit-msg(python): conf가 깨지면 명확한 에러로 즉시 멈춘다"""
-        # GF-126에서 pre-commit이 삭제되며 가드 검증 대상이 이 훅으로 옮겨왔다.
-        # 이 훅은 커밋 type 목록·길이 제한·트레일러 키를 conf에서 읽으므로 가드가
-        # 여전히 필요하다.
-        msg_file = self.write("msgfile", "[feat] test\n")
+        msg_file = self.write("msgfile", "[feat] test\n")  # ---- 3
         self.assertConfGuardFires(
             self.python(self.hooks_copy / "prepare-commit-msg", msg_file)
         )
 
     def test_install_sh가_멈춘다(self):
         """install.sh: conf가 깨지면 명확한 에러로 즉시 멈춘다"""
-        # install.sh는 자기 옆의 hooks/를 읽으므로 클론 구조를 그대로 흉내낸다.
         clone_copy = self.temp_dir(prefix="gitformat-clone-")
-        shutil.copytree(HOOKS_DIR, clone_copy / "hooks")
+        shutil.copytree(HOOKS_DIR, clone_copy / "hooks")  # ---- 4
         (clone_copy / "install.sh").write_bytes(INSTALL_SH.read_bytes())
         self.break_conf(clone_copy / "hooks")
         self.assertConfGuardFires(
@@ -70,3 +64,20 @@ class ConfigFileUnreadableTest(IsolatedRepoTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 hooksPath 없이 각 파일을 직접 실행
+#   설명: 가드가 conf를 읽는 시점에 걸리는지만 보므로 core.hooksPath는 연결하지 않고 각 파일을 직접 실행한다.
+# 2 conf가 깨지면 명확한 메시지로 즉시 멈춤
+#   설명: 빈 값으로 진행하면 원인을 알 수 없는 거부가 되므로 종료 코드가 0이 아니고 가드 메시지가 출력에 있어야 한다.
+#   관련: GF-76, GF-77, tests/isolated_repo.py(CONF_GUARD_MESSAGE)
+#   개념: 읽기 검증 가드(fail-closed)
+# 3 가드 검증 대상은 prepare-commit-msg 훅
+#   설명: GF-126에서 pre-commit이 삭제되며 가드 검증 대상이 이 훅으로 옮겨왔다. 이 훅은 커밋 type 목록·길이 제한·트레일러 키를 conf에서
+#   읽으므로 가드가 여전히 필요하다.
+#   관련: GF-126
+# 4 install.sh는 자기 옆의 hooks/를 읽는다
+#   설명: 그래서 클론 구조(hooks/ + install.sh)를 임시 디렉터리에 그대로 흉내낸 뒤 그 사본의 conf만 깨뜨린다. 진짜
+#   hooks/gitformat.conf는 건드리지 않는다.
+#   관련: install.sh

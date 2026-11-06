@@ -29,8 +29,7 @@ from isolated_repo import IsolatedRepoTestCase
 class Python3MissingTest(IsolatedRepoTestCase):
     def setUp(self):
         super().setUp()
-        # path_without()이 "python3만 정확히 가려졌고 git은 살아 있다"를 이미 단언한다.
-        self.shadow_path = self.path_without("python3")
+        self.shadow_path = self.path_without("python3")  # ---- 1
         self.no_python = {"PATH": str(self.shadow_path)}
 
     def baseline_commit(self):
@@ -54,12 +53,24 @@ class Python3MissingTest(IsolatedRepoTestCase):
         self.git_ok("add", "a.txt")
         result = self.commit("[feat] blocked by missing python3", env=self.no_python)
         self.assertRejected(result)
-        self.assertIn("python3", result.output)
+        self.assertIn("python3", result.output)  # ---- 2
 
-        # 종료 코드만 보면 안 된다 — 커밋 객체가 정말 안 생겼는지까지 확인한다.
-        self.assertEqual(before, self.head_hash())
+        self.assertEqual(before, self.head_hash())  # ---- 3
         self.assertEqual(1, self.commit_count())
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 섀도 PATH 자체가 검증됨
+#   설명: path_without()이 python3만 정확히 가려졌고 git은 살아 있다는 것을 이미 단언한다. 그래서 여기서는 환경 가정을 다시 검사하지 않는다.
+#   관련: tests/isolated_repo.py(path_without)
+#   개념: 섀도 PATH
+# 2 python3 부재가 원인으로 드러남
+#   설명: python3이 없을 때 커밋이 막히되 출력에 python3이 언급돼야 원인을 알 수 있다. 조용한 실패가 아니라 언제나 드러나는 실패다.
+#   관련: GF-113, decision-16, decision-18
+#   개념: fail-closed
+# 3 커밋 객체가 정말 안 생겼는지 확인
+#   설명: 종료 코드만 보면 안 된다. HEAD가 기준 커밋 그대로이고 커밋 수가 1인지 확인한다.

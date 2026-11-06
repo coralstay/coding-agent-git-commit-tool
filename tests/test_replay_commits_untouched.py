@@ -28,8 +28,7 @@ import unittest
 
 from isolated_repo import HOOKS_DIR, IsolatedRepoTestCase
 
-# AC #1이 규정하는 진행 상태 파일. 훅은 존재 여부만 보므로 내용은 무엇이든 된다.
-PROGRESS_FILES = ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REBASE_HEAD", "REVERT_HEAD")
+PROGRESS_FILES = ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REBASE_HEAD", "REVERT_HEAD")  # ---- 1
 
 
 class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
@@ -52,9 +51,7 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
         editor.write_text(
             "#!/bin/sh\n"
             'tmp="$(mktemp)"\n'
-            # 제목 뒤에 빈 줄을 넣는다 — 안 넣으면 git이 원래 있던 다음 줄까지
-            # 제목으로 이어 붙여 읽어(실측) 단언이 제목만 보지 못한다.
-            f'printf "{subject}\\n\\n" > "$tmp"\n'
+            f'printf "{subject}\\n\\n" > "$tmp"\n'  # ---- 2
             'cat "$1" >> "$tmp"\n'
             'mv "$tmp" "$1"\n',
             encoding="utf-8",
@@ -66,16 +63,14 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
         """재생 경로에서는 거부도, 트레이스백도, 어떤 출력도 없어야 한다."""
         self.assertAccepted(result)
         self.assertNotIn("Traceback", result.output)
-        self.assertNotIn("prepare-commit-msg", result.output)
+        self.assertNotIn("prepare-commit-msg", result.output)  # ---- 3
 
     # ── 실제 git 명령으로 재생·병합 커밋을 만든다 ────────────────────
 
     def test_cherry_pick이_거부되지_않는다(self):
         """[GF-125] cherry-pick 재생 커밋은 훅의 거부나 트레이스백 없이 완료된다"""
         base_branch = self.current_branch()
-        # GF-127 이후 메시지 검증(브랜치 Task-Id 강제 포함)이 prepare-commit-msg에서
-        # 돌므로, 준비 단계의 일반 커밋도 Task-Id가 있는 브랜치에서 만들어야 한다.
-        self.git_ok("checkout", "-q", "-b", "GF-1-side")
+        self.git_ok("checkout", "-q", "-b", "GF-1-side")  # ---- 4
         self.write("a.txt", "hi\n")
         self.git_ok("add", "a.txt")
         self.commit_ok("[feat] 재생할 커밋")
@@ -92,10 +87,7 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
         self.assertHookSilent(self.git("revert", "--no-edit", "HEAD"))
 
         self.assertEqual(2, self.commit_count())
-        # 충돌 없는 revert는 REVERT_HEAD가 없어 면제에 걸리지 않는다(source=message).
-        # git이 만드는 이 제목은 [type][subsystem] 형식이 아니지만 GF-127에서 형식
-        # 규칙의 예외로 인정했으므로 검증을 거치고도 조용히 통과한다.
-        self.assertEqual('Revert "[feat] 기준 커밋"', self.head_subject())
+        self.assertEqual('Revert "[feat] 기준 커밋"', self.head_subject())  # ---- 5
 
     def test_에디터로_여는_revert도_거부되지_않는다(self):
         """[GF-125] git revert --edit은 에디터가 열려도 거부되지 않는다(source=merge)"""
@@ -103,9 +95,7 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
 
         result = self.git("revert", "--edit", "HEAD", env={"GIT_EDITOR": editor})
 
-        # source=template이 아니라 merge로 오므로(실측) 면제가 먼저 걸린다. 에디터가
-        # 관여하는데도 통과하는 유일한 경로다.
-        self.assertHookSilent(result)
+        self.assertHookSilent(result)  # ---- 6
         self.assertEqual(2, self.commit_count())
         self.assertEqual("[revert] 에디터에서 고친 제목", self.head_subject())
 
@@ -117,24 +107,19 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
         self.git_ok("add", "feature.txt")
         self.commit_ok("[feat] 병합될 커밋")
         self.git_ok("checkout", "-q", base_branch)
-        # 양쪽을 분기시켜 fast-forward가 아닌 실제 병합 커밋이 만들어지게 한다.
-        self.write("main.txt", "main\n")
+        self.write("main.txt", "main\n")  # ---- 7
         self.git_ok("add", "main.txt")
         self.commit_ok("[feat] 병합하는 쪽 커밋")
 
         self.assertHookSilent(self.git("merge", "--no-ff", "--no-edit", "GF-2-feature"))
 
-        # 부모가 2개인지까지 봐야 진짜 병합 커밋이 만들어진 것이 증명된다.
         parents = self.git_ok("log", "-1", "--format=%p").stdout.split()
-        self.assertEqual(2, len(parents), f"병합 커밋이 아니다: {parents}")
+        self.assertEqual(2, len(parents), f"병합 커밋이 아니다: {parents}")  # ---- 8
 
     def test_rebase_재생은_트레일러를_붙이지_않고_실패하지도_않는다(self):
         """[GF-128 AC #8] 실제 git rebase로 커밋을 재생해도 트레일러가 추가되지 않고 훅이 실패하지 않는다"""
         base_branch = self.current_branch()
-        # 재생할 커밋은 훅 없이 만든다 — 훅을 거친 커밋은 이미 트레일러 키를 다 갖고
-        # 있어서, 면제가 깨져도 키 단위 중복 판정 때문에 메시지가 그대로일 수 있다.
-        # 트레일러가 하나도 없는 커밋이라야 "아무것도 붙이지 않았다"가 증명된다.
-        no_hooks = self.temp_dir(prefix="gitformat-nohooks-")
+        no_hooks = self.temp_dir(prefix="gitformat-nohooks-")  # ---- 9
         self.git_ok("checkout", "-q", "-b", "GF-5-rebase")
         self.git_ok("config", "core.hooksPath", no_hooks)
         for name in ("one", "two"):
@@ -143,8 +128,7 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
             self.commit_ok(f"[feat] 재생할 커밋 {name}")
         self.git_ok("config", "core.hooksPath", HOOKS_DIR)
 
-        # 기준 브랜치를 앞으로 보내 rebase가 fast-forward가 아니라 실제 재생이 되게 한다.
-        self.git_ok("checkout", "-q", base_branch)
+        self.git_ok("checkout", "-q", base_branch)  # ---- 10
         self.write("main.txt", "main\n")
         self.git_ok("add", "main.txt")
         self.commit_ok("[feat] 기준 브랜치 전진")
@@ -158,8 +142,7 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
         self.assertEqual(
             ["[feat] 재생할 커밋 two", "[feat] 재생할 커밋 one"], messages
         )
-        # 재생된 커밋이 정말 새로 만들어졌는지(기준 브랜치 위에 올라갔는지) 확인한다.
-        self.assertEqual(
+        self.assertEqual(  # ---- 11
             self.git_ok("rev-parse", base_branch).stdout.strip(),
             self.git_ok("rev-parse", "HEAD~2").stdout.strip(),
         )
@@ -174,9 +157,7 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
                 progress = self.git_dir_file(name)
                 progress.write_text(self.head_hash() + "\n", encoding="utf-8")
                 try:
-                    # source=template은 원래 거부 대상이다. 그래도 통과해야 한다 —
-                    # 실행 순서가 뒤바뀌면(거부가 면제보다 먼저) 이 단언이 깨진다.
-                    result = self.python(self.hook, message_file, "template")
+                    result = self.python(self.hook, message_file, "template")  # ---- 12
                 finally:
                     progress.unlink()
                 self.assertAccepted(result)
@@ -194,3 +175,48 @@ class ReplayCommitsUntouchedTest(IsolatedRepoTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 재생·병합을 알리는 진행 상태 파일
+#   설명: AC #1이 규정하는 진행 상태 파일(MERGE_HEAD, CHERRY_PICK_HEAD, REBASE_HEAD, REVERT_HEAD)이다. 훅은 존재
+#   여부만 보므로 내용은 무엇이든 된다.
+#   관련: GF-125 AC #1, decision-18
+#   개념: 재생 커밋 면제
+# 2 제목 뒤에 빈 줄을 넣는다
+#   설명: 안 넣으면 git이 원래 있던 다음 줄까지 제목으로 이어 붙여 읽어(실측) 단언이 제목만 보지 못한다. 에디터 시뮬레이션이 기존 내용을 보존하는 이유는
+#   doc-15에 있다(>로 덮어쓰면 훅이 넣어둔 내용이 사라져 오판).
+#   관련: doc-15, tests/test_editor_commit_rejected.py
+# 3 재생 경로에서는 어떤 출력도 없어야 함
+#   설명: 거부도 트레이스백도 없을 뿐 아니라 훅 이름조차 출력에 나오지 않아야 훅이 조용히 통과했다고 말할 수 있다.
+#   관련: GF-125
+# 4 준비 단계의 일반 커밋도 Task-Id 브랜치에서
+#   설명: GF-127 이후 메시지 검증(브랜치 Task-Id 강제 포함)이 prepare-commit-msg에서 돌므로, 재생할 커밋을 만드는 일반 커밋도
+#   Task-Id가 있는 브랜치(GF-1-side)에서 만들어야 한다.
+#   관련: GF-127, tests/test_branch_task_id_required.py
+# 5 충돌 없는 revert는 면제가 아니라 검증을 거치고도 통과
+#   설명: 충돌 없는 revert는 REVERT_HEAD가 없어 면제에 걸리지 않는다(source=message). git이 만드는 Revert "..." 제목은
+#   [type][subsystem] 형식이 아니지만 GF-127에서 형식 규칙의 예외로 인정했으므로 검증을 거치고도 조용히 통과한다.
+#   관련: GF-127, tests/test_message_format_enforced.py
+#   개념: revert 제목 예외
+# 6 revert --edit은 source=merge로 온다(실측)
+#   설명: source=template이 아니라 merge로 오므로 면제가 먼저 걸린다. 에디터가 관여하는데도 통과하는 유일한 경로다.
+#   관련: GF-125, tests/test_editor_commit_rejected.py
+#   개념: 면제가 거부보다 먼저
+# 7 양쪽을 분기시켜 실제 병합 커밋을 만든다
+#   설명: fast-forward가 아니라 부모가 둘인 실제 병합 커밋이 만들어지게 하려는 준비다.
+# 8 부모가 2개여야 병합 커밋임이 증명됨
+#   설명: 부모가 2개인지까지 봐야 진짜 병합 커밋이 만들어진 것이 증명된다. 아니면 fast-forward를 병합으로 오인한 공허한 통과일 수 있다.
+#   개념: 공허한 통과 방지
+# 9 재생할 커밋은 훅 없이 만든다
+#   설명: 훅을 거친 커밋은 이미 트레일러 키를 다 갖고 있어서, 면제가 깨져도 키 단위 중복 판정 때문에 메시지가 그대로일 수 있다. 트레일러가 하나도 없는 커밋이라야
+#   '아무것도 붙이지 않았다'가 증명된다.
+#   관련: GF-128 AC #8, tests/test_trailer_key_dedup.py
+# 10 기준 브랜치를 앞으로 보내 실제 재생이 되게 함
+#   설명: rebase가 fast-forward가 아니라 실제 재생이 되게 하려고 기준 브랜치에 커밋을 하나 더한다.
+# 11 재생된 커밋이 새로 만들어졌는지 확인
+#   설명: 재생된 커밋이 정말 새로 만들어졌는지(기준 브랜치 위에 올라갔는지) HEAD~2가 기준 브랜치와 같은지로 확인한다.
+# 12 source=template은 원래 거부 대상인데도 통과
+#   설명: 실행 순서가 뒤바뀌어 거부가 면제보다 먼저 오면 이 단언이 깨진다. 면제가 거부보다 먼저 와야 한다는 순서를 고정한다.
+#   관련: decision-18, GF-125
+#   개념: 면제 우선순위
