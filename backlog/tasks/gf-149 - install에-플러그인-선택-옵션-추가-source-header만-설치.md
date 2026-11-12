@@ -64,3 +64,9 @@ GF-148 install은 템플릿(.githooks)의 모든 파일을 없는 것만 복사�
 - DoD #1(직접 실행): python3 -m unittest discover -s tests → 152 tests OK(54초). sh -n, shellcheck -s sh 통과. .githooks 경유 두 번째 모드(GITFORMAT_TEST_VIA_GITHOOKS=1)도 152개 통과했다는 것은 서브에이전트 보고이며 제가 다시 돌리지는 않았다.
 - DoD #2(직접 측정, mktemp 저장소, 전역 git 설정 무력화): --plugins nope → 오류 메시지, 저장소에 .git과 a.c만 남음(아무것도 쓰지 않음). --plugins source-header 설치 → .githooks/pre-commit, prepare-commit-msg, pre-commit.d/20-source-header 3개만 생기고 prepare-commit-msg.d/10-commit-format 없음. 엉터리 메시지 커밋 성공(형식 미강제). .source-header.json을 켜고 헤더 없는 b.c를 커밋하면 'b.c:1: error: source header is missing (H001)'로 차단되고 커밋 수 그대로.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+install·migrate에 --plugins <이름,...> 옵션을 추가해 기존 저장소에 source-header 검사만 먼저 설치할 수 있게 했다(옵션이 없으면 둘 다, 모르는 이름이면 아무것도 쓰지 않고 오류, 기존 파일은 지우지 않음). 플러그인 이름은 템플릿 파일명의 숫자 접두사를 뗀 것이라 새 플러그인이 자동으로 잡힌다. README에 기존 저장소용 예시를 적었다. 검증: 전체 테스트 152개 통과, sh -n·shellcheck 통과, 임시 저장소 실측에서 커밋 형식은 강제되지 않고 헤더 없는 파일만 source-header 검사(H001)로 차단됨. 한계: AC #2에는 먼저 실패하는 증거가 없다(install과 같은 파서를 공유). 커밋 7834cb5 11f1bcc 9476186(브랜치 task/GF-149).
+<!-- SECTION:FINAL_SUMMARY:END -->
