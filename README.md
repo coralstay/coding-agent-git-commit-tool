@@ -187,6 +187,18 @@ git-commit-tool              # = git-commit-tool install .
 git add .githooks && git commit -m "[chore][hooks] .githooks 추가"
 ```
 
+- 기존 저장소에는 플러그인을 골라 설치할 수 있습니다. 예를 들어 소스 헤더 검사만 켜고
+  커밋 형식 검사(`10-commit-format`)는 나중에 켜려면 이렇게 합니다. 이름은
+  `commit-format`, `source-header`이고 쉼표로 이어 여러 개를 고를 수 있습니다. 옵션이
+  없으면 둘 다 설치하고, 모르는 이름이면 아무것도 쓰지 않고 실패합니다. `migrate`도 같은
+  옵션을 받습니다(`git-commit-tool migrate --plugins source-header ~/my-project`).
+  이미 있는 플러그인 파일은 고르지 않아도 지우지 않습니다.
+
+  ```sh
+  cd ~/existing-project
+  git-commit-tool --plugins source-header
+  ```
+
 - 플러그인은 PATH의 `git-commit-tool`을 부르고, `git-commit-tool`(= `install.sh`)이 자기
   클론의 `hooks/prepare-commit-msg`를 실행합니다. 그래서 반드시 `install.sh`를
   **`git-commit-tool`이라는 이름으로 PATH에** 두셔야 합니다.
