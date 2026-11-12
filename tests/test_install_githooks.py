@@ -104,6 +104,71 @@ class InstallGithooksTest(IsolatedRepoTestCase):
         self.assertEqual("", self.config("core.hooksPath"))
         self.assertEqual([], self.installed_files())  # ---- 5
 
+    def test_plugins_옵션이_고른_플러그인만_설치한다(self):
+        """GF-149#1 --plugins source-header면 10-commit-format 없이 디스패처와 20-source-header만 만든다"""
+        self.assertAccepted(self.install("--plugins", "source-header"))
+        self.assertEqual(
+            [
+                "pre-commit",
+                "pre-commit.d/20-source-header",
+                "prepare-commit-msg",
+            ],
+            self.installed_files(),
+        )
+        self.assertEqual(".githooks", self.config("core.hooksPath"))
+
+    def test_plugins_옵션은_등호_쉼표_목록_install_서브커맨드를_받는다(self):
+        """GF-149#1 --plugins=이름, 쉼표 목록, `install --plugins ... 대상`도 같은 결과"""
+        self.assertAccepted(self.install("--plugins=commit-format"))
+        self.assertEqual(
+            [
+                "pre-commit",
+                "prepare-commit-msg",
+                "prepare-commit-msg.d/10-commit-format",
+            ],
+            self.installed_files(),
+        )
+        self.assertAccepted(self.install("--plugins", "source-header,commit-format"))
+        self.assertEqual(TEMPLATE_FILES, self.installed_files())
+        self.repo = self.make_repo(hooks_path=None)
+        self.assertAccepted(
+            self.run_cmd(
+                [INSTALL_SH, "install", "--plugins", "source-header", self.repo],
+                stdin=b"",
+            )
+        )
+        self.assertNotIn(
+            "prepare-commit-msg.d/10-commit-format", self.installed_files()
+        )
+
+    def test_plugins_옵션이_없으면_둘_다_설치한다(self):
+        """GF-149#1 옵션이 없으면 지금처럼 commit-format과 source-header를 둘 다 설치한다"""
+        self.assertAccepted(self.install())
+        self.assertEqual(TEMPLATE_FILES, self.installed_files())
+
+    def test_모르는_플러그인_이름이면_아무것도_쓰지_않고_실패한다(self):
+        """GF-149#1 모르는 이름(다른 이름과 섞여도)이면 아무것도 쓰지 않고 exit 1, 알려진 이름을 안내"""
+        for value in ("nope", "source-header,nope", ""):
+            result = self.install("--plugins", value)
+            self.assertEqual(1, result.returncode, str(result))
+            if value:
+                self.assertIn("nope", result.output)
+            self.assertIn("source-header", result.output)
+            self.assertEqual("", self.config("core.hooksPath"))
+            self.assertEqual([], self.installed_files())
+        result = self.run_cmd([INSTALL_SH, self.repo, "--plugins"], stdin=b"")
+        self.assertEqual(1, result.returncode, str(result))
+        self.assertEqual([], self.installed_files())
+
+    def test_source_header만_설치하면_커밋_형식은_강제되지_않는다(self):
+        """GF-149#1 --plugins source-header 뒤에는 형식에 안 맞는 메시지도 커밋되고 트레일러가 붙지 않는다"""
+        self.assertAccepted(self.install("--plugins", "source-header"))
+        env = {"PATH": self.path_with_tools(git_commit_tool=INSTALL_SH)}
+        self.write("a.txt", "hi\n")
+        self.git_ok("add", "a.txt")
+        self.assertAccepted(self.commit("이상한 메시지", env=env))
+        self.assertTrailerCount(self.head_message(), "Hooks-Commit:", 0)
+
     # == Coverage ==
 
     def test_옛_방식_설치면_migrate를_안내하고_멈춘다(self):

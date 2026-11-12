@@ -16,10 +16,14 @@
 # 그 로직을 부른다.
 #
 # 사용법:
-#   git-commit-tool [install] [target-repo-dir]   .githooks 설치(기본 동작)
-#   git-commit-tool migrate [target-repo-dir]     옛 설치(hooksPath=클론의 hooks/)를 .githooks로
+#   git-commit-tool [install] [--plugins 이름,...] [target-repo-dir]   .githooks 설치(기본 동작)
+#   git-commit-tool migrate [--plugins 이름,...] [target-repo-dir]     옛 설치(hooksPath=클론의 hooks/)를 .githooks로
 #   git-commit-tool hook <훅 이름> [훅 인자...]    .githooks 플러그인이 부르는 진입점
 # target-repo-dir을 생략하면 현재 디렉터리를 대상으로 한다.
+# --plugins(또는 --plugins=이름,...)는 설치할 플러그인을 고른다(GF-149): commit-format,
+# source-header. 생략하면 둘 다 설치한다. 디스패처는 항상 설치한다. 모르는 이름이면
+# 아무것도 쓰지 않고 exit 1. 이미 있는 플러그인 파일은 고르지 않았어도 지우지 않는다.
+# 옵션은 서브커맨드 뒤(생략하면 맨 앞)의 어디에나 둘 수 있다.
 set -eu
 
 _SRC="$0"
@@ -66,12 +70,13 @@ if [ "${1:-}" = "hook" ]; then  # ---- 4
 fi
 
 usage() {
-  echo "사용법 (Usage): git-commit-tool [install] [target-repo-dir]"
-  echo "                git-commit-tool migrate [target-repo-dir]"
+  echo "사용법 (Usage): git-commit-tool [install] [--plugins 이름,...] [target-repo-dir]"
+  echo "                git-commit-tool migrate [--plugins 이름,...] [target-repo-dir]"
   echo "                git-commit-tool hook prepare-commit-msg <훅 인자...>"
   echo "  install  지정한 git 저장소(생략 시 현재 디렉터리)에 .githooks/(디스패처 +"
   echo "           기본 플러그인)를 만들고 core.hooksPath=.githooks, commit.template을 설정"
   echo "  migrate  core.hooksPath가 이 도구의 hooks/를 가리키는 옛 설치를 .githooks로 옮김"
+  echo "  --plugins 이름,...  설치할 플러그인(commit-format, source-header). 생략하면 둘 다"
   echo "  hook     .githooks 플러그인이 부르는 진입점 - 직접 쓸 일은 없습니다"
   echo "  -h, --help   이 도움말 출력"
 }
@@ -82,9 +87,50 @@ case "${1:-}" in
   migrate) COMMAND="migrate"; shift ;;
 esac
 
+# 템플릿 플러그인 파일 경로(<훅>.d/<NN>-<이름>)에서 이름만 뽑는다: 10-commit-format -> commit-format.
+plugin_name() {
+  _base="${1##*/}"
+  _base="${_base#"${_base%%[!0-9]*}"}"
+  printf '%s\n' "${_base#-}"
+}
+
+# 템플릿에 있는 플러그인 이름을 쉼표로 이어 출력한다(오류 안내용).
+known_plugins() {
+  _list=""
+  for _src in "$GITHOOKS_TEMPLATE"/*.d/*; do
+    [ -f "$_src" ] || continue
+    _list="${_list:+${_list}, }$(plugin_name "$_src")"
+  done
+  printf '%s\n' "$_list"
+}
+
+# --plugins로 고른 이름(양쪽을 쉼표로 감싼 ",a,b,"). PLUGINS_GIVEN이 비어 있으면
+# 옵션이 없었던 것이라 모든 플러그인을 설치한다.
+PLUGINS_GIVEN=""
+PLUGINS=""
+set_plugins() {
+  PLUGINS_GIVEN=1
+  PLUGINS=",$1,"
+  if [ -z "$1" ]; then
+    echo "install.sh: --plugins에 플러그인 이름이 필요합니다 (지원: $(known_plugins))" >&2
+    exit 1
+  fi
+}
+
 TARGET=""
-for arg in "$@"; do
+while [ "$#" -gt 0 ]; do
+  arg="$1"
+  shift
   case "$arg" in
+    --plugins)
+      if [ "$#" -eq 0 ]; then
+        echo "install.sh: --plugins에 플러그인 이름이 필요합니다 (지원: $(known_plugins))" >&2
+        exit 1
+      fi
+      set_plugins "$1"
+      shift
+      ;;
+    --plugins=*) set_plugins "${arg#--plugins=}" ;;
     -h|--help|help)
       usage
       exit 0
@@ -100,6 +146,30 @@ for arg in "$@"; do
     *) TARGET="$arg" ;;
   esac
 done
+
+# 모르는 플러그인 이름이 하나라도 있으면 아무것도 쓰기 전에 멈춘다.
+if [ -n "$PLUGINS_GIVEN" ]; then
+  _known=","
+  for _src in "$GITHOOKS_TEMPLATE"/*.d/*; do
+    [ -f "$_src" ] || continue
+    _known="${_known}$(plugin_name "$_src"),"
+  done
+  _names="${PLUGINS#,}"
+  _names="${_names%,}"
+  _old_ifs="$IFS"
+  IFS=","
+  for _name in $_names; do
+    case "$_known" in
+      *",${_name},"*) ;;
+      *)
+        IFS="$_old_ifs"
+        echo "install.sh: 알 수 없는 플러그인: ${_name:-(빈 이름)} (지원: $(known_plugins))" >&2
+        exit 1
+        ;;
+    esac
+  done
+  IFS="$_old_ifs"
+fi
 TARGET="${TARGET:-$(pwd)}"
 TARGET="$(cd "$TARGET" && pwd)"
 readonly TARGET
@@ -145,7 +215,19 @@ unmanaged_git_hooks() {  # ---- 7
 install_githooks() {
   for _src in "$GITHOOKS_TEMPLATE"/* "$GITHOOKS_TEMPLATE"/*.d/*; do
     [ -f "$_src" ] || continue
+    # --plugins가 있으면 고르지 않은 플러그인은 만들지 않는다(디스패처는 항상 만든다).
+    # 이미 있는 파일은 지우지 않는다 - 이 함수는 복사만 한다.
     _rel="${_src#"$GITHOOKS_TEMPLATE"/}"
+    case "$_rel" in
+      *.d/*)
+        if [ -n "$PLUGINS_GIVEN" ]; then
+          case "$PLUGINS" in
+            *",$(plugin_name "$_rel"),"*) ;;
+            *) continue ;;
+          esac
+        fi
+        ;;
+    esac
     _dst="${TARGET}/.githooks/${_rel}"
     if [ ! -e "$_dst" ]; then  # ---- 8
       mkdir -p "$(dirname "$_dst")"
