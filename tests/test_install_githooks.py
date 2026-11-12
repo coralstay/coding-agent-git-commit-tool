@@ -1,3 +1,12 @@
+# ---
+# title: test_install_githooks
+# description: install이 대상 저장소에 .githooks를 만들고 hooksPath를 설정하며 멱등인지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # GF-148: install이 대상 저장소에 .githooks를 만들고 core.hooksPath=.githooks를 설정
 """install.sh(= git-commit-tool)의 .githooks 설치를 본다(decision-32).
 
@@ -32,7 +41,7 @@ class InstallGithooksTest(IsolatedRepoTestCase):
         self.repo = self.make_repo(hooks_path=None)
 
     def install(self, *args):
-        return self.run_cmd([INSTALL_SH, *args, self.repo], stdin=b"")
+        return self.run_cmd([INSTALL_SH, *args, self.repo], stdin=b"")  # ---- 1
 
     def config(self, key):
         return self.git("config", "--get", key).stdout.strip()
@@ -60,7 +69,7 @@ class InstallGithooksTest(IsolatedRepoTestCase):
         self.assertEqual(TEMPLATE_FILES, self.installed_files())
         for rel in TEMPLATE_FILES:
             installed = self.repo / ".githooks" / rel
-            self.assertEqual((GITHOOKS_TEMPLATE / rel).read_bytes(), installed.read_bytes())
+            self.assertEqual((GITHOOKS_TEMPLATE / rel).read_bytes(), installed.read_bytes())  # ---- 2
             self.assertTrue(os.access(installed, os.X_OK), f"{rel}에 실행 권한이 없다")
         self.assertEqual(".githooks", self.config("core.hooksPath"))
         self.assertEqual(str(GITMESSAGE), self.config("commit.template"))
@@ -71,7 +80,7 @@ class InstallGithooksTest(IsolatedRepoTestCase):
         first = {r: (self.repo / ".githooks" / r).read_bytes() for r in TEMPLATE_FILES}
         self.assertAccepted(self.install())
         second = {r: (self.repo / ".githooks" / r).read_bytes() for r in TEMPLATE_FILES}
-        self.assertEqual(first, second)
+        self.assertEqual(first, second)  # ---- 3
         self.assertEqual(".githooks", self.config("core.hooksPath"))
 
     def test_다른_hooksPath가_있으면_덮지_않고_멈춘다(self):
@@ -81,7 +90,7 @@ class InstallGithooksTest(IsolatedRepoTestCase):
         self.assertRejected(result)
         self.assertIn(".husky", result.output)
         self.assertEqual(".husky", self.config("core.hooksPath"))
-        self.assertEqual([], self.installed_files())
+        self.assertEqual([], self.installed_files())  # ---- 4
 
     def test_링크가_아닌_기존_훅이_있으면_덮지_않고_멈춘다(self):
         """GF-148#3 .git/hooks/에 링크가 아닌 훅이 있으면 아무것도 쓰지 않고 실패한다"""
@@ -93,7 +102,7 @@ class InstallGithooksTest(IsolatedRepoTestCase):
         self.assertIn("pre-commit", result.output)
         self.assertEqual("#!/bin/sh\nexit 0\n", own_hook.read_text(encoding="utf-8"))
         self.assertEqual("", self.config("core.hooksPath"))
-        self.assertEqual([], self.installed_files())
+        self.assertEqual([], self.installed_files())  # ---- 5
 
     # == Coverage ==
 
@@ -103,7 +112,7 @@ class InstallGithooksTest(IsolatedRepoTestCase):
         result = self.install()
         self.assertRejected(result)
         self.assertIn("migrate", result.output)
-        self.assertEqual(str(HOOKS_DIR), self.config("core.hooksPath"))
+        self.assertEqual(str(HOOKS_DIR), self.config("core.hooksPath"))  # ---- 6
 
     def test_샘플과_심볼릭_링크_훅은_막지_않는다(self):
         """.git/hooks/의 *.sample과 심볼릭 링크(옛 templateDir이 심은 링크 등)는 설치를 막지 않는다"""
@@ -117,7 +126,7 @@ class InstallGithooksTest(IsolatedRepoTestCase):
         """.githooks의 고친 파일은 그대로 두고, 없는 템플릿 파일만 새로 만든다"""
         custom = self.write(".githooks/pre-commit", "#!/bin/sh\n# custom\n")
         self.assertAccepted(self.install())
-        self.assertEqual("#!/bin/sh\n# custom\n", custom.read_text(encoding="utf-8"))
+        self.assertEqual("#!/bin/sh\n# custom\n", custom.read_text(encoding="utf-8"))  # ---- 7
         self.assertEqual(TEMPLATE_FILES, self.installed_files())
 
     def test_설치_뒤_커밋이_실제로_검사된다(self):
@@ -135,8 +144,40 @@ class InstallGithooksTest(IsolatedRepoTestCase):
         result = self.install("--global")
         self.assertRejected(result)
         self.assertIn("decision-32", result.output)
-        self.assertEqual("", self.config("core.hooksPath"))
+        self.assertEqual("", self.config("core.hooksPath"))  # ---- 8
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 install은 비대화형(stdin 비움)으로 실행
+#   설명: 설치 스크립트가 질문으로 멈추지 않는지 보려고 stdin을 빈 바이트로 닫고 대상 저장소를 마지막 인자로 넘긴다.
+#   관련: install.sh
+# 2 설치본은 템플릿과 바이트 단위로 같다
+#   설명: githooks/ 템플릿을 대상 저장소의 .githooks/로 그대로 복사한다. 실행 권한까지 보존돼야 git이 훅으로 실행한다.
+#   관련: decision-32, githooks/
+# 3 두 번 실행해도 결과가 같다(멱등)
+#   설명: 두 번째 실행도 성공하고 파일 내용과 core.hooksPath가 그대로여야 한다.
+#   관련: GF-148#3
+#   개념: 멱등(idempotent)
+# 4 다른 hooksPath가 있으면 아무것도 쓰지 않고 멈춤
+#   설명: hooksPath를 바꾸면 기존 훅(.husky 등)이 조용히 무시되므로 덮지 않고 실패한다. 설정도 원래 값 그대로, .githooks/도 만들어지지 않아야
+#   한다.
+#   관련: GF-148#3, decision-32
+#   개념: fail-closed
+# 5 링크가 아닌 기존 .git/hooks 훅도 보호
+#   설명: 사용자가 직접 둔 훅은 내용도 hooksPath도 그대로 두고 설치를 멈춘다. 실행 가능한 파일이 있다는 사실이 곧 사용자의 자산이다.
+#   관련: GF-148#3
+#   개념: fail-closed
+# 6 옛 방식 설치면 migrate를 안내하고 멈춤
+#   설명: hooksPath가 이 도구의 hooks/를 직접 가리키는 옛 설치는 install이 덮지 않고 migrate를 안내한다. 값도 바꾸지 않는다.
+#   관련: tests/test_migrate_githooks.py, decision-2, decision-32
+# 7 직접 고친 파일은 덮지 않고 빠진 파일만 채움
+#   설명: 사용자가 .githooks/에서 고친 파일은 그대로 두고 템플릿에만 있는 파일만 새로 만든다. 재설치가 사용자 수정을 지우면 안 된다.
+#   관련: GF-148#3
+#   개념: 멱등(idempotent)
+# 8 --global은 없어졌다고 알리고 멈춤
+#   설명: --global(init.templateDir)은 decision-32로 폐지됐다. 전역 설정을 건드리지 않고 실패하며, 출력에 결정 번호를 알린다.
+#   관련: decision-32

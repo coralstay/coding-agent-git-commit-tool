@@ -1,3 +1,12 @@
+# ---
+# title: test_branch_task_id_required
+# description: prepare-commit-msg가 브랜치명의 Task-Id 패턴이 없는 커밋을 거부하는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """prepare-commit-msg가 브랜치명의 Task-Id 패턴을 강제하는지 본다(decision-4).
 
 구 robustness-commit-msg.bats(GF-23)의 브랜치 관련 케이스. <prefix>-<번호> 패턴이
@@ -36,17 +45,15 @@ class BranchTaskIdTest(IsolatedRepoTestCase):
     def test_Task_Id_없는_non_exempt_브랜치는_거부된다(self):
         """[경계값] Task-Id 없는 non-exempt 브랜치는 거부된다"""
         self.git_ok("checkout", "-q", "-b", "no-task-id-here")
-        self.assertRejected(self.commit("[feat] missing task id"))
+        self.assertRejected(self.commit("[feat] missing task id"))  # ---- 1
 
     # ── branchExempt --add 시 기본 예외 유실 회귀 방지 (GF-78) ──────
 
     def test_add해도_기본_예외_브랜치는_유지된다(self):
         """[GF-78] branchExempt를 --add해도 기본 예외 브랜치(main)는 유지된다"""
         self.git_ok("config", "--add", "gitformat.branchExempt", "hotfix/*")
-        # -B: 이미 main 브랜치일 수도(git init 기본값에 따라 다름) 있어 -b 대신
-        # 강제 생성/전환으로 환경에 상관없이 동작하게 한다.
-        self.git_ok("checkout", "-q", "-B", "main")
-        self.assertAccepted(self.commit("[feat] main after add"))
+        self.git_ok("checkout", "-q", "-B", "main")  # ---- 2
+        self.assertAccepted(self.commit("[feat] main after add"))  # ---- 3
 
     def test_add한_패턴도_예외로_동작한다(self):
         """[GF-78] branchExempt로 --add한 패턴도 예외로 동작한다"""
@@ -58,8 +65,24 @@ class BranchTaskIdTest(IsolatedRepoTestCase):
         """[GF-78] branchExempt를 --add해도 Task-Id 없는 다른 브랜치는 여전히 거부된다"""
         self.git_ok("config", "--add", "gitformat.branchExempt", "hotfix/*")
         self.git_ok("checkout", "-q", "-b", "unrelated-branch")
-        self.assertRejected(self.commit("[feat] still rejected"))
+        self.assertRejected(self.commit("[feat] still rejected"))  # ---- 4
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 Task-Id 없는 브랜치는 거부(fail-closed)
+#   설명: 예외 브랜치가 아닌데 <prefix>-<번호> 패턴이 없으면 커밋을 거부한다. 패턴을 못 읽으면 통과시키는 쪽이 아니라 막는 쪽이 기본이다.
+#   관련: decision-4, hooks/prepare-commit-msg
+#   개념: fail-closed
+# 2 이미 main일 수도 있어 -B로 강제 전환
+#   설명: git init 기본 브랜치 이름이 환경에 따라 달라 이미 main일 수 있다. -b 대신 -B(강제 생성/전환)를 써서 환경에 상관없이 동작하게 한다.
+# 3 --add해도 기본 예외 브랜치(main)가 유지됨
+#   설명: 로컬 오버라이드를 --add로 얹을 때 내장 기본 예외가 유실되던 회귀를 막는다. 예외 목록은 로컬 오버라이드와 내장 기본값의 합집합이어야 한다.
+#   관련: GF-78
+#   개념: 합집합 의미론(회귀 방지)
+# 4 --add 뒤에도 다른 브랜치는 여전히 거부
+#   설명: 예외를 하나 추가했다고 검사가 느슨해지면 안 된다. 추가한 패턴과 무관한 브랜치는 계속 거부돼야 한다.
+#   관련: GF-78

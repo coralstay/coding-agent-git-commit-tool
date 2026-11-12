@@ -1,3 +1,12 @@
+# ---
+# title: test_non_utf8_locale
+# description: UTF-8 로케일이 없는 환경에서도 훅의 한국어 출력이 깨지지 않는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """로케일이 UTF-8을 제공하지 않는 환경에서 훅이 한국어를 출력할 때의 동작을 본다.
 
 구 robustness-locale.bats(GF-116, decision-16). sh 시절의 LC_ALL=C.UTF-8
@@ -25,7 +34,7 @@ import unittest
 
 from isolated_repo import IsolatedRepoTestCase
 
-BROKEN_LOCALE = {"LC_ALL": "C", "PYTHONCOERCECLOCALE": "0", "PYTHONUTF8": "0"}
+BROKEN_LOCALE = {"LC_ALL": "C", "PYTHONCOERCECLOCALE": "0", "PYTHONUTF8": "0"}  # ---- 1
 
 
 class NonUtf8LocaleTest(IsolatedRepoTestCase):
@@ -49,7 +58,7 @@ class NonUtf8LocaleTest(IsolatedRepoTestCase):
         self.assertAccepted(result)
         self.assertEqual(1, self.commit_count())
         self.assertNotIn("UnicodeEncodeError", result.output)
-        self.assertNotIn("Traceback", result.output)
+        self.assertNotIn("Traceback", result.output)  # ---- 2
 
     # ── stderr 경로: 거부 메시지가 읽을 수 있는 한국어여야 한다 ─────
 
@@ -61,9 +70,7 @@ class NonUtf8LocaleTest(IsolatedRepoTestCase):
         result = self.commit_with_broken_locale("bad message format")
 
         self.assertRejected(result)
-        # 폴백 전에는 이 메시지가 \uXXXX 이스케이프로 떨어져 이 단언이 실패했다 —
-        # 읽을 수 있는 한국어와 일치한다는 것 자체가 "이스케이프되지 않았다"는 증명이다.
-        self.assertIn("커밋 메시지가 [type][subsystem] 형식이 아닙니다", result.output)
+        self.assertIn("커밋 메시지가 [type][subsystem] 형식이 아닙니다", result.output)  # ---- 3
 
     # ── 유니코드 길이 계산이 로케일과 무관해야 한다 ─────────────────
 
@@ -72,8 +79,7 @@ class NonUtf8LocaleTest(IsolatedRepoTestCase):
         self.write("a.txt", "hi\n")
         self.git_ok("add", "a.txt")
 
-        # 한글 27자(67바이트) — 바이트로 셌다면 50자 제한에 걸려 거부된다(GF-83).
-        result = self.commit_with_broken_locale(
+        result = self.commit_with_broken_locale(  # ---- 4
             "[feat] 한글제목길이계산이로케일에영향받지않는다"
         )
         self.assertAccepted(result)
@@ -84,15 +90,42 @@ class NonUtf8LocaleTest(IsolatedRepoTestCase):
         self.write("a.txt", "hi\n")
         self.git_ok("add", "a.txt")
 
-        # 14자×4 + "[feat] " = 63자. 3회 반복은 49자로 제한에 걸리지 않는다(실측).
-        result = self.commit_with_broken_locale(
+        result = self.commit_with_broken_locale(  # ---- 5
             "[feat] " + "가나다라마바사아자차카타파하" * 4
         )
         self.assertRejected(result)
         self.assertIn("제목이", result.output)
-        # 첫 커밋이라 HEAD가 아직 없다 — 부재를 직접 본다.
-        self.assertRejected(self.git("rev-parse", "--verify", "-q", "HEAD"))
+        self.assertRejected(self.git("rev-parse", "--verify", "-q", "HEAD"))  # ---- 6
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 UTF-8을 제공하지 않는 환경을 로컬에서 재현
+#   설명: LC_ALL=C에 PYTHONCOERCECLOCALE=0(PEP 538 로케일 강제 변환 끄기)과 PYTHONUTF8=0(PEP 540 UTF-8 모드
+#   끄기)을 더하면 musl/Alpine처럼 C.UTF-8이 없는 환경에서 Python이 ascii stdout으로 떨어지는 상태가 된다. 실제 그런 컨테이너를 CI에
+#   두지 않고도 같은 실패 모드를 고정한다.
+#   관련: GF-116, decision-16
+#   개념: PEP 538 / PEP 540
+# 2 트레이스백 없이 통과
+#   설명: 폴백 전에는 한국어 '건너뜀' 메시지 출력에서 UnicodeEncodeError가 나 커밋이 트레이스백과 함께 막혔다. stdout은 기본
+#   errors=strict라 죽고 stderr은 backslashreplace라 죽지는 않지만 한국어가 \uXXXX로 깨졌다. 훅 전체를 태워도 인코딩 때문에 죽지
+#   않는다는 사실을 본다.
+#   관련: GF-116, GF-135
+#   개념: errors=strict / backslashreplace
+# 3 읽을 수 있는 한국어와 일치 = 이스케이프되지 않았다
+#   설명: 폴백 전에는 이 메시지가 \uXXXX 이스케이프로 떨어져 이 단언이 실패했다. 사람이 읽을 수 있는 한국어와 일치한다는 것 자체가 이스케이프되지 않았다는
+#   증명이다.
+#   관련: hooks/prepare-commit-msg(UTF-8 preamble)
+# 4 바이트가 아니라 코드포인트로 센다
+#   설명: 한글 27자(67바이트)는 바이트로 셌다면 50자 제한에 걸려 거부된다(GF-83). 로케일이 깨져도 코드포인트 단위로 세므로 통과해야 한다.
+#   관련: GF-83, GF-116
+#   개념: 코드포인트 vs 바이트
+# 5 63자 제목은 거부(2회 반복은 통과 경계)
+#   설명: 14자x4 + '[feat] ' = 63자. 3회 반복은 49자로 제한에 걸리지 않는다(실측). 그래서 4회 반복이 거부되는 최소 사례다.
+#   관련: GF-83
+#   개념: 경계값
+# 6 첫 커밋이라 HEAD가 없음을 직접 본다
+#   설명: HEAD가 아직 없으므로 before 해시 비교 대신 rev-parse --verify의 실패로 커밋 객체의 부재를 확인한다.

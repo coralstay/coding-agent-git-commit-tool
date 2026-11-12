@@ -1,3 +1,12 @@
+# ---
+# title: test_format_only_trailers
+# description: 훅이 토큰·툴콜 측정 트레일러를 붙이지 않고 포맷 트레일러만 다루는지 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """커밋 포맷 전용 — 훅이 토큰·툴콜을 측정하지 않는다(GF-146, decision-31).
 
 GF-146 전에는 AI 도구가 감지된 커밋에 Tokens-Used/Tool-Calls를 붙이려고 세션
@@ -61,10 +70,9 @@ class FormatOnlyTrailersTest(IsolatedRepoTestCase):
             self.commit("[feat] no measurement", env=self.claude_env(home))
         )
         message = self.head_message()
-        self.assertTrailerKeyAbsent(message, "Tokens-Used")
+        self.assertTrailerKeyAbsent(message, "Tokens-Used")  # ---- 1
         self.assertTrailerKeyAbsent(message, "Tool-Calls")
-        # 모델 판정은 남는다 — 트랜스크립트를 읽는 경로 자체가 사라진 게 아니다.
-        self.assertTrailerCount(
+        self.assertTrailerCount(  # ---- 2
             message, "AI-Agent: claude-code/2.1.0 (claude-test-model)", 1
         )
 
@@ -77,7 +85,7 @@ class FormatOnlyTrailersTest(IsolatedRepoTestCase):
         message = self.head_message()
         self.assertTrailerKeyAbsent(message, "Tokens-Used")
         self.assertTrailerKeyAbsent(message, "Tool-Calls")
-        self.assertTrailerCount(message, "AI-Agent: other-tool/1.2.3 (gpt-5)", 1)
+        self.assertTrailerCount(message, "AI-Agent: other-tool/1.2.3 (gpt-5)", 1)  # ---- 3
 
     def test_GF_146_1_B2_직접_쓴_측정_줄은_그대로_남는다(self):
         """[GF-146#1/GF-146#B2] 메시지에 직접 쓴 Tokens-Used/Tool-Calls 줄은 지우지도 바꾸지도 않는다(AI 커밋·사람 커밋 모두)"""
@@ -89,7 +97,7 @@ class FormatOnlyTrailersTest(IsolatedRepoTestCase):
         )
         message = self.head_message()
         self.assertTrailerCount(message, "Tokens-Used: in=123 out=45", 1)
-        self.assertTrailerCount(message, "Tokens-Used:", 1)
+        self.assertTrailerCount(message, "Tokens-Used:", 1)  # ---- 4
         self.assertTrailerCount(message, "Tool-Calls: 7", 1)
         self.assertTrailerCount(message, "Tool-Calls:", 1)
 
@@ -107,7 +115,7 @@ class FormatOnlyTrailersTest(IsolatedRepoTestCase):
         self.assertAccepted(
             self.commit("[feat] no record file", env=self.claude_env(home))
         )
-        self.assertFalse(self.git_dir_file(ATTRIBUTED_RECORD).exists())
+        self.assertFalse(self.git_dir_file(ATTRIBUTED_RECORD).exists())  # ---- 5
         self.assertFalse(self.git_dir_file(LEGACY_CURSOR).exists())
 
     def test_GF_146_1_B3_남아_있는_상태_파일을_건드리지_않는다(self):
@@ -121,7 +129,7 @@ class FormatOnlyTrailersTest(IsolatedRepoTestCase):
         self.assertAccepted(
             self.commit("[feat] leave state files", env=self.claude_env(home))
         )
-        self.assertEqual("fake-session\nstale-key\n", record.read_text(encoding="utf-8"))
+        self.assertEqual("fake-session\nstale-key\n", record.read_text(encoding="utf-8"))  # ---- 6
         self.assertEqual("fake-session 3\n", cursor.read_text(encoding="utf-8"))
 
     # ── AC #2: 남은 트레일러 삽입은 그대로 ───────────────────────────
@@ -134,7 +142,7 @@ class FormatOnlyTrailersTest(IsolatedRepoTestCase):
         self.assertAccepted(
             self.commit("[feat] agent trailers", env=self.claude_env(home))
         )
-        self.assertEqual(
+        self.assertEqual(  # ---- 7
             ["Task-Id", "AI-Agent", "Co-Authored-By", "Hooks-Commit"],
             self.trailer_keys(),
         )
@@ -157,10 +165,7 @@ class FormatOnlyTrailersTest(IsolatedRepoTestCase):
 
     def test_GF_146_2_B2_직접_쓴_측정_줄도_본문_72자_제한을_받는다(self):
         """[GF-146#2/GF-146#B2] Tokens-Used/Tool-Calls가 등록 트레일러에서 빠졌으므로 72자를 넘는 직접 쓴 측정 줄은 평범한 본문 줄로 거부되고, 72자 이내면 그대로 통과한다"""
-        # 결정(GF-146): 이 도구는 측정 키를 더는 모른다. 등록 트레일러만 72자 예외를
-        # 받으므로(validate_length) 측정 줄은 다른 본문 줄과 똑같이 다룬다 — 측정 줄을
-        # 위해 예외를 남겨 두면 그게 곧 측정과의 결합이다.
-        long_line = "Tokens-Used: " + "in=1 " * 13 + "out=2"
+        long_line = "Tokens-Used: " + "in=1 " * 13 + "out=2"  # ---- 8
         self.assertGreater(len(long_line), 72)
         result = self.commit(f"[feat] long tokens line\n\n{long_line}")
         self.assertRejected(result)
@@ -173,3 +178,36 @@ class FormatOnlyTrailersTest(IsolatedRepoTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 측정 트레일러(Tokens-Used/Tool-Calls)는 붙지 않는다
+#   설명: usage가 든 트랜스크립트가 있어도 훅은 토큰·툴콜을 측정하지 않는다. 측정은 별도 컴포넌트의 몫이다(2026-10-12 유저 결정).
+#   관련: GF-146, decision-31
+#   개념: 형식과 측정의 분리
+# 2 모델 판정은 남는다
+#   설명: 트랜스크립트를 읽는 경로 자체가 사라진 게 아니다. AI-Agent의 모델은 측정이 아니라 출처 기록이라 남는다.
+#   관련: tests/test_trailer_ai_attribution.py
+# 3 claude-code 외 도구에도 측정 줄이 없다
+#   설명: 다른 AI 도구에도 unavailable (no-usage-channel) 같은 측정 줄을 붙이지 않고 AI-Agent 한 줄만 남는다.
+#   관련: GF-146
+# 4 직접 쓴 측정 줄은 그대로 남는다
+#   설명: 사람이나 에이전트가 메시지에 직접 쓴 Tokens-Used/Tool-Calls 줄은 지우지도 바꾸지도 않고 정확히 한 번만 있어야 한다(AI 커밋과 사람 커밋
+#   모두).
+#   관련: GF-146#B2
+#   개념: 멱등
+# 5 귀속 기록 파일을 만들지 않는다
+#   설명: 귀속될 응답이 있는 claude-code 커밋 뒤에도 .git/.gitformat-token-attributed가 생기지 않는다. 측정과 깃의 결합을 끊은
+#   결과다.
+#   관련: GF-146#B3
+# 6 옛 상태 파일은 읽지도 고치지도 지우지도 않는다
+#   설명: GF-146 전에 생긴 귀속 기록·델타 커서 파일이 그대로 남아야 한다. 훅이 더는 그 파일을 알지 못하므로 건드리면 안 된다.
+#   관련: GF-146#B3
+# 7 에이전트 커밋의 트레일러 구성과 순서
+#   설명: Task-Id · AI-Agent · Co-Authored-By · Hooks-Commit만 이 순서로 붙는다. 순서까지 고정해 트레일러 삽입 회귀를 잡는다.
+#   관련: GF-146#B4
+#   개념: 트레일러 삽입 순서
+# 8 측정 줄도 평범한 본문 줄로 72자 제한을 받는다
+#   설명: 결정(GF-146): 이 도구는 측정 키를 더는 모른다. 등록 트레일러만 72자 예외를 받으므로(validate_length) 측정 줄은 다른 본문 줄과
+#   똑같이 다룬다. 측정 줄을 위해 예외를 남겨 두면 그게 곧 측정과의 결합이다.
+#   관련: GF-146#B2, hooks/prepare-commit-msg(validate_length)

@@ -1,3 +1,12 @@
+# ---
+# title: isolated_repo
+# description: 테스트마다 훅이 연결된 임시 git 저장소를 새로 만들어 주는 블랙박스 테스트 헬퍼
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """격리된 임시 git 저장소 헬퍼(GF-124). 기존 tests/helpers/git-format.bash 대체.
 
 이 저장소의 테스트는 훅을 import하지 않는다 — 임시 저장소에서 실제 `git commit`을
@@ -37,32 +46,16 @@ SIGNED_OFF_BY = f"{USER_NAME} <{USER_EMAIL}>"
 CONF_GUARD_MESSAGE = "gitformat: gitformat.conf를 읽을 수 없습니다"
 BROKEN_CONF = "this is not valid git-config syntax [[[\n"
 
-# GITFORMAT_TEST_VIA_GITHOOKS=1이면 기본 훅 연결(core.hooksPath=hooks/)을
-# githooks/ 사본(디스패처 + 플러그인)으로 바꿔, 기존 테스트 전체가 대상 저장소의
-# .githooks 경로(prepare-commit-msg.d/10-commit-format → git-commit-tool hook)로도
-# 통과하는지 본다(GF-148, decision-32). 플러그인은 PATH의 git-commit-tool을 부르므로
-# 러너가 그 이름을 이 클론의 install.sh로 PATH에 세워 둬야 한다 — 다른 클론을 가리키면
-# 엉뚱한 훅을 검증하게 되므로 import 시점에 확인하고 멈춘다. hooks_path를 직접 넘기는
-# 테스트(hooks/ 사본, conf 깨뜨리기 등)는 그대로 hooks/를 직접 쓴다.
-VIA_GITHOOKS = os.environ.get("GITFORMAT_TEST_VIA_GITHOOKS") == "1"
+VIA_GITHOOKS = os.environ.get("GITFORMAT_TEST_VIA_GITHOOKS") == "1"  # ---- 1
 if VIA_GITHOOKS:
     _tool = shutil.which("git-commit-tool")
     if _tool is None or Path(_tool).resolve() != INSTALL_SH.resolve():
-        raise RuntimeError(
+        raise RuntimeError(  # ---- 2
             "GITFORMAT_TEST_VIA_GITHOOKS=1에는 PATH의 git-commit-tool이 "
             f"{INSTALL_SH}를 가리켜야 한다 (지금: {_tool})"
         )
 
-# 자식 프로세스 환경에서 항상 지우는 변수.
-#
-# AI_AGENT/CLAUDE_CODE_SESSION_ID: 이 스위트를 Claude Code로 돌리면 셸 환경에 이미
-# 노출돼 있어(GF-97 검증 중 실제로 발견) "사람 커밋" 시나리오가 조용히 AI 커밋이
-# 된다. bats 판은 그 케이스에서만 `env -u`로 지웠지만, 여기서는 기본값으로 지워
-# 모든 테스트가 실행 환경과 무관하게 같은 결과를 내게 한다 — AI 경로를 검증하는
-# 테스트는 필요한 값을 명시적으로 넘긴다.
-# GIT_*: 러너가 훅/래퍼 안에서 실행될 때 새어들어오면 임시 저장소가 아니라 이
-# 저장소의 인덱스를 건드린다.
-_STRIPPED_ENV = (
+_STRIPPED_ENV = (  # ---- 3
     "AI_AGENT",
     "CLAUDE_CODE_SESSION_ID",
     "GIT_DIR",
@@ -119,7 +112,7 @@ def transcript_slug(path):
     베끼지 않고 이 규칙을 독립적으로 구현해 둔다 — bats 판이 한때 훅과 똑같이
     잘못 계산해(둘 다 `/`만 치환) 우연히 일치하며 버그를 놓쳤다.
     """
-    return re.sub(r"[^A-Za-z0-9]", "-", str(path))
+    return re.sub(r"[^A-Za-z0-9]", "-", str(path))  # ---- 4
 
 
 def path_without(tool):
@@ -136,7 +129,7 @@ def path_without(tool):
     디렉터리에 심볼릭 링크로 모은다. git/sh/grep 등은 전부 정상 동작하면서 그
     도구만 정확히 못 찾게 된다.
     """
-    shadow = Path(tempfile.mkdtemp(prefix="gitformat-shadow-"))
+    shadow = Path(tempfile.mkdtemp(prefix="gitformat-shadow-"))  # ---- 5
     for directory in os.environ.get("PATH", "").split(os.pathsep):
         if not directory or not os.path.isdir(directory):
             continue
@@ -187,9 +180,7 @@ class IsolatedRepoTestCase(unittest.TestCase):
 
     def temp_dir(self, prefix="gitformat-test-"):
         path = Path(tempfile.mkdtemp(prefix=prefix))
-        # macOS의 /var는 /private/var 심볼릭 링크라, 해석하지 않으면 훅이 계산하는
-        # 물리 경로와 테스트가 계산하는 경로가 갈려 트랜스크립트 슬러그가 어긋난다.
-        path = path.resolve()
+        path = path.resolve()  # ---- 6
         self.addCleanup(shutil.rmtree, path, ignore_errors=True)
         return path
 
@@ -203,7 +194,7 @@ class IsolatedRepoTestCase(unittest.TestCase):
         self.run_cmd_ok(["git", "config", "commit.gpgsign", "false"], cwd=repo, env=env)
         self.run_cmd_ok(["git", "config", "user.email", USER_EMAIL], cwd=repo, env=env)
         self.run_cmd_ok(["git", "config", "user.name", USER_NAME], cwd=repo, env=env)
-        if hooks_path == HOOKS_DIR and VIA_GITHOOKS:
+        if hooks_path == HOOKS_DIR and VIA_GITHOOKS:  # ---- 7
             hooks_path = self.githooks_copy()
         if hooks_path is not None:
             self.run_cmd_ok(
@@ -253,9 +244,7 @@ class IsolatedRepoTestCase(unittest.TestCase):
             (shadow / tool).exists(),
             f"섀도 PATH에 {tool}이 남아 있으면 이 테스트는 아무것도 검증하지 못한다",
         )
-        # 섀도 PATH가 그 도구만 정확히 가렸는지 고정한다. 이 단언이 없으면 PATH가
-        # 통째로 망가져 git 자체가 죽는 경우에도 테스트가 똑같이 통과한다.
-        probe = self.run_cmd(["git", "--version"], env={"PATH": str(shadow)})
+        probe = self.run_cmd(["git", "--version"], env={"PATH": str(shadow)})  # ---- 8
         self.assertEqual(0, probe.returncode, str(probe))
         return shadow
 
@@ -281,32 +270,14 @@ class IsolatedRepoTestCase(unittest.TestCase):
         """자식 프로세스에 넘길 환경변수. 러너 자신의 os.environ은 바꾸지 않는다."""
         env = {k: v for k, v in os.environ.items() if k not in _STRIPPED_ENV}
         env.update(asdf_pins())
-        # 시스템 git config는 항상 차단한다 - 기계마다 다른 값이 테스트 결과를 바꾼다.
-        env["GIT_CONFIG_SYSTEM"] = os.devnull
-        # 훅의 shell_pwd()는 POSIX 셸과 같이 환경변수 PWD가 현재 디렉터리를 가리킬
-        # 때 그 값을 쓴다. 셸을 거치지 않고 실행하면 PWD가 러너의 것으로 남으므로
-        # 명시적으로 맞춰준다.
-        env["PWD"] = str(cwd)
+        env["GIT_CONFIG_SYSTEM"] = os.devnull  # ---- 9
+        env["PWD"] = str(cwd)  # ---- 10
         for key, value in (overrides or {}).items():
             if value is None:
                 env.pop(key, None)
             else:
                 env[key] = str(value)
-        # 실행하는 사람의 전역 git config(~/.gitconfig)가 격리 저장소로 새어 들어오지
-        # 않게 빈 파일로 돌린다. 이게 없으면 결과가 러너 환경에 따라 달라진다 - 실제로
-        # 개발 기계에는 install.sh --global이 심은 commit.template이 있어서 에디터
-        # 커밋이 source=template으로 왔는데, 그 설정이 없는 CI에서는 git이 source
-        # 인자를 아예 넘기지 않아 훅의 에디터 거부가 통과해버렸다(GF-125).
-        #
-        # HOME은 바꾸지 않는다 - 원래 이유는 CI가 pip install로 언어별 검사 도구를
-        # 실제 HOME 아래 사용자 site-packages에 깔았기 때문인데, 그 검사는 GF-135에서
-        # 사라졌다. 그래도 그대로 둔다 - 러너 환경을 필요 없이 바꾸지 않는다.
-        #
-        # HOME을 명시적으로 넘긴 테스트는 건드리지 않는다. install.sh --global은
-        # 가짜 HOME의 .gitconfig에 쓰고 테스트가 그 파일을 읽어 확인하므로,
-        # GIT_CONFIG_GLOBAL을 씌우면 그 경로가 어긋난다(GIT_CONFIG_GLOBAL이 HOME보다
-        # 우선한다).
-        if "HOME" not in (overrides or {}):
+        if "HOME" not in (overrides or {}):  # ---- 11
             env["GIT_CONFIG_GLOBAL"] = str(self.empty_global_config())
         return env
 
@@ -322,12 +293,10 @@ class IsolatedRepoTestCase(unittest.TestCase):
             timeout=timeout,
             check=False,
         )
-        # 출력은 항상 바이트로 받아 UTF-8로 디코드한다 — 로케일을 깨뜨린 채 훅을
-        # 돌리는 테스트(GF-116)도 훅이 출력 인코딩을 UTF-8로 고정하므로 이게 맞다.
         return Result(
             argv,
             completed.returncode,
-            completed.stdout.decode("utf-8", errors="replace"),
+            completed.stdout.decode("utf-8", errors="replace"),  # ---- 12
             completed.stderr.decode("utf-8", errors="replace"),
         )
 
@@ -422,3 +391,62 @@ class IsolatedRepoTestCase(unittest.TestCase):
 
     def assertTrailerKeyAbsent(self, message, key):
         self.assertEqual(0, message.count(f"{key}:"), f"{key}가 붙었다:\n{message}")
+
+
+# ======== 노트 ========
+# 1 훅 연결 방식 전환 스위치
+#   설명: GITFORMAT_TEST_VIA_GITHOOKS=1이면 기본 훅 연결(core.hooksPath=hooks/)을 githooks/ 사본(디스패처 +
+#   플러그인)으로 바꿔, 기존 테스트 전체가 대상 저장소의 .githooks 경로(prepare-commit-msg.d/10-commit-format ->
+#   git-commit-tool hook)로도 통과하는지 본다. hooks_path를 직접 넘기는 테스트(hooks/ 사본, conf 깨뜨리기 등)는 그대로
+#   hooks/를 직접 쓴다.
+#   관련: GF-148, decision-32, githooks/, .github/workflows/test.yml
+#   개념: 두 번째 테스트 모드
+# 2 엉뚱한 클론을 검증하지 않도록 import 시점에 멈춤
+#   설명: 플러그인은 PATH의 git-commit-tool을 부른다. 그 이름이 이 클론의 install.sh가 아니면 다른 클론의 훅을 검증하게 되므로, 조용히
+#   통과시키지 않고 RuntimeError로 즉시 멈춘다.
+#   관련: GF-148, install.sh
+#   개념: fail-closed
+# 3 자식 환경에서 항상 지우는 변수
+#   설명: AI_AGENT/CLAUDE_CODE_SESSION_ID는 Claude Code로 스위트를 돌리면 셸 환경에 이미 노출돼 있어(GF-97 검증 중 발견) 사람
+#   커밋 시나리오가 조용히 AI 커밋이 된다. 기본값으로 지워 모든 테스트가 실행 환경과 무관하게 같은 결과를 내게 하고, AI 경로 테스트는 필요한 값을 명시적으로
+#   넘긴다. GIT_*는 러너가 훅/래퍼 안에서 실행될 때 새어들어오면 임시 저장소가 아니라 이 저장소의 인덱스를 건드린다.
+#   관련: GF-97, claude_env()
+#   개념: 환경 격리
+# 4 트랜스크립트 슬러그를 훅과 독립적으로 구현
+#   설명: Claude Code의 슬러그 규칙은 영숫자가 아닌 모든 문자를 하이픈으로 치환하는 것이다(GF-98). 훅의 계산을 베끼지 않고 규칙을 독립 구현한다.
+#   bats 판이 한때 훅과 똑같이 잘못 계산(둘 다 / 만 치환)해 우연히 일치하며 버그를 놓쳤기 때문이다.
+#   관련: GF-98, tests/test_trailer_ai_attribution.py
+#   개념: 독립 구현(oracle 분리)
+# 5 특정 도구 하나만 가린 섀도 PATH
+#   설명: PATH를 하드코딩하면 플랫폼마다 도구 위치가 달라 깨지고(GF-32: macOS/Homebrew는 /opt/homebrew/bin,
+#   ubuntu-latest는 /usr/bin), 도구가 있는 디렉터리만 빼면 git도 같은 디렉터리라 같이 사라진다. 그래서 PATH의 모든 실행파일을 대상 하나만
+#   빼고 임시 디렉터리에 심볼릭 링크로 모은다.
+#   관련: GF-32, tests/test_python3_missing.py
+#   개념: 섀도 PATH
+# 6 임시 디렉터리는 물리 경로로 해석
+#   설명: macOS의 /var는 /private/var 심볼릭 링크라, 해석하지 않으면 훅이 계산하는 물리 경로와 테스트가 계산하는 경로가 갈려 트랜스크립트 슬러그가
+#   어긋난다. 정리는 addCleanup으로 걸어 테스트끼리 상태를 공유하지 않는다.
+#   관련: transcript_slug()
+# 7 VIA_GITHOOKS일 때만 기본 훅 경로를 갈아끼움
+#   설명: 기본값(HOOKS_DIR)을 그대로 쓰는 호출만 githooks 사본으로 바꾼다. 호출자가 hooks_path를 명시한 경우는 그 의도를 존중한다.
+#   관련: VIA_GITHOOKS(노트 1)
+# 8 섀도 PATH가 정확히 그 도구만 가렸는지 고정
+#   설명: 이 단언이 없으면 PATH가 통째로 망가져 git 자체가 죽는 경우에도 테스트가 똑같이 통과한다. git --version이 성공해야 섀도 PATH가
+#   유효하다.
+# 9 시스템 git config 차단
+#   설명: 기계마다 다른 /etc/gitconfig 값이 테스트 결과를 바꾸므로 항상 막는다.
+# 10 환경변수 PWD를 cwd에 맞춤
+#   설명: 훅의 shell_pwd()는 POSIX 셸처럼 환경변수 PWD가 현재 디렉터리를 가리킬 때 그 값을 쓴다. 셸을 거치지 않고 실행하면 PWD가 러너의 것으로
+#   남으므로 명시적으로 맞춘다.
+#   관련: hooks/prepare-commit-msg
+# 11 전역 git config를 빈 파일로 격리
+#   설명: 실행하는 사람의 ~/.gitconfig가 격리 저장소로 새면 결과가 환경에 따라 달라진다. 실제로 개발 기계에는 install.sh --global이 심은
+#   commit.template이 있어 에디터 커밋이 source=template으로 왔지만, 그 설정이 없는 CI에서는 git이 source 인자를 아예 넘기지 않아
+#   훅의 에디터 거부가 통과해버렸다(GF-125). HOME은 바꾸지 않는다(원래 이유였던 언어별 검사 도구는 GF-135에서 사라졌지만 러너 환경을 필요 없이 바꾸지
+#   않는다). HOME을 명시적으로 넘긴 테스트는 건드리지 않는다. GIT_CONFIG_GLOBAL이 HOME보다 우선하므로 씌우면 가짜 HOME의 .gitconfig
+#   경로가 어긋난다.
+#   관련: GF-125, GF-135, tests/test_editor_commit_rejected.py
+#   개념: GIT_CONFIG_GLOBAL 우선순위
+# 12 출력은 바이트로 받아 UTF-8로 디코드
+#   설명: 로케일을 깨뜨린 채 훅을 돌리는 테스트(GF-116)도 훅이 출력 인코딩을 UTF-8로 고정하므로 이게 맞다.
+#   관련: GF-116, tests/test_non_utf8_locale.py

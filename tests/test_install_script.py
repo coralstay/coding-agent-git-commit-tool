@@ -1,3 +1,12 @@
+# ---
+# title: test_install_script
+# description: install.sh의 비대화형 분기와 에러 처리를 HOME 격리 상태에서 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """install.sh의 공통 분기를 본다(구 robustness-install.bats).
 
 GF-26, decision-8: 표준 인증이 아니라 install.sh의 실제 분기(비대화형/에러 처리)에
@@ -49,9 +58,7 @@ class InstallScriptTest(IsolatedRepoTestCase):
 
     def test_비대화형에서도_프롬프트_없이_설치된다(self):
         """[비대화형] stdin이 tty가 아니어도 묻지 않고 .githooks 설치를 끝낸다"""
-        # GF-148(decision-32) 전에는 여기서 전역(init.templateDir) 설정을 물었고,
-        # 비대화형이면 건너뛰었다. 전역 설치가 없어져 묻는 것 자체가 없다.
-        home = self.fake_home()
+        home = self.fake_home()  # ---- 1
         result = self.run_cmd(
             [INSTALL_SH, self.repo], env={"HOME": str(home)}, stdin=b""
         )
@@ -67,8 +74,7 @@ class InstallScriptTest(IsolatedRepoTestCase):
             ).stdout.strip(),
         )
 
-        # 전역(가짜 HOME) 설정은 안 건드렸어야 한다.
-        self.assertRejected(
+        self.assertRejected(  # ---- 2
             self.git_config_file(home / ".gitconfig", "init.templateDir")
         )
 
@@ -87,11 +93,8 @@ class InstallScriptTest(IsolatedRepoTestCase):
 
     def test_설치가_이_저장소의_hooksPath를_바꾸지_않는다(self):
         """[GF-123 회귀] 다른 클론 사본의 설치가 이 저장소 자신의 core.hooksPath를 바꾸지 않는다"""
-        # 타깃 인자를 생략하면 install.sh의 기본 타깃인 CWD(=이 저장소)에 설치가
-        # 일어난다. 예전에는 그 결과 이 저장소의 core.hooksPath가 곧 삭제될 임시
-        # 경로를 가리켜 이후 모든 커밋에서 훅이 조용히 실행되지 않았다.
         home = self.fake_home()
-        root = self.fake_root()
+        root = self.fake_root()  # ---- 3
 
         before = self.git(
             "-C", GITFORMAT_ROOT, "config", "--get", "core.hooksPath"
@@ -102,10 +105,9 @@ class InstallScriptTest(IsolatedRepoTestCase):
         after = self.git(
             "-C", GITFORMAT_ROOT, "config", "--get", "core.hooksPath"
         ).stdout
-        self.assertEqual(before, after)
+        self.assertEqual(before, after)  # ---- 4
 
-        # 타깃 쪽에는 정상적으로 설치됐어야 한다(설치 자체가 안 된 것으로 통과하면 안 된다).
-        self.assertEqual(
+        self.assertEqual(  # ---- 5
             ".githooks",
             self.git_ok(
                 "-C", self.repo, "config", "--get", "core.hooksPath"
@@ -116,17 +118,14 @@ class InstallScriptTest(IsolatedRepoTestCase):
 
     def test_python3이_없으면_설치를_막는다(self):
         """[필요조건] PATH에 python3이 없으면 install.sh가 명확한 에러로 설치를 막는다"""
-        # 이 가드는 설치 시점만 본다 - 훅이 실제로 실행되는 시점의 PATH는 보장하지
-        # 못하고, 그쪽 동작은 test_python3_missing.py가 따로 검증한다(GF-107).
-        shadow = self.path_without("python3")
+        shadow = self.path_without("python3")  # ---- 6
         result = self.run_cmd(
             [INSTALL_SH, self.repo], env={"PATH": str(shadow)}, stdin=b""
         )
         self.assertRejected(result)
         self.assertIn("python3을 찾을 수 없습니다", result.output)
 
-        # 가드가 설정보다 먼저 걸렸어야 한다 - 에러만 찍고 설치는 다 해버리면 안 된다.
-        self.assertRejected(
+        self.assertRejected(  # ---- 7
             self.git("-C", self.repo, "config", "--get", "core.hooksPath")
         )
 
@@ -149,3 +148,33 @@ class InstallScriptTest(IsolatedRepoTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ======== 노트 ========
+# 1 전역 설치가 사라져 묻는 것 자체가 없다
+#   설명: GF-148(decision-32) 전에는 여기서 전역(init.templateDir) 설정을 물었고 비대화형이면 건너뛰었다. 전역 설치가 없어져 묻는 것
+#   자체가 없으므로 stdin이 tty가 아니어도 .githooks 설치를 끝낸다.
+#   관련: GF-148, decision-32
+#   개념: 비대화형
+# 2 전역(가짜 HOME) 설정은 건드리지 않음
+#   설명: 설치가 사용자의 전역 git 설정을 바꾸면 안 된다. 가짜 HOME의 .gitconfig에 init.templateDir이 없어야 한다.
+#   관련: decision-32
+# 3 타깃 인자를 생략하면 CWD가 기본 타깃
+#   설명: install.sh의 기본 타깃은 CWD(=이 저장소)다. 예전에는 그 결과 이 저장소의 core.hooksPath가 곧 삭제될 임시 경로를 가리켜 이후 모든
+#   커밋에서 훅이 조용히 실행되지 않았다. 그래서 클론 사본으로 설치해도 이 저장소의 설정이 그대로인지 본다.
+#   관련: GF-123
+#   개념: 회귀 방지
+# 4 설치 전후 이 저장소의 hooksPath가 같다
+#   설명: 테스트가 개발 중인 저장소 자신의 설정을 오염시키지 않는다는 불변식이다.
+#   관련: GF-123
+#   개념: 불변식
+# 5 타깃에는 정상 설치됐어야 함
+#   설명: 설치 자체가 안 된 것으로 통과하면 위 불변식 검사가 공허해진다. 타깃 저장소의 hooksPath가 .githooks인지 확인한다.
+#   개념: 공허한 통과 방지
+# 6 python3 가드는 설치 시점만 본다
+#   설명: 이 가드는 설치 시점만 본다. 훅이 실제로 실행되는 시점의 PATH는 보장하지 못하고 그쪽 동작은 test_python3_missing.py가 따로
+#   검증한다(GF-107).
+#   관련: GF-113, GF-107, decision-16, tests/test_python3_missing.py
+# 7 가드가 설정보다 먼저 걸렸어야 함
+#   설명: 에러만 찍고 설치는 다 해버리면 안 된다. 실패했을 때 hooksPath가 설정되지 않았는지 확인한다.
+#   개념: fail-closed
