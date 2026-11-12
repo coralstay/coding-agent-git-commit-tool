@@ -1,10 +1,10 @@
 ---
 id: GF-149
 title: 'install에 플러그인 선택 옵션 추가: source-header만 설치'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-31T11:07:00Z'
-updated_date: '2026-10-31T11:17:00Z'
+updated_date: '2026-11-12T01:57:00Z'
 labels:
   - hooks
   - install
